@@ -2,11 +2,11 @@ import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { prepareCut } from './rollback.js';
-import { planRollback, applyRollback } from './files.js';
+import { prepareCut } from './rewind.js';
+import { planRewind, applyRewind } from './files.js';
 
 const MAX_BODY_BYTES = 1024 * 1024;
-const CHANNEL = '/message-rollback';
+const CHANNEL = '/message-rewind';
 const DIFF_TIMEOUT = 30_000;
 /** Matches the `$DSH_HOME` > `~/.dsh` resolution the harness itself uses. */
 const SESSIONS_ROOT = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'sessions');
@@ -121,7 +121,7 @@ export function apply(ctx) {
   }
 
   /** Read every recorded diff and compute the pre-cut content without touching disk. */
-  const plan = (sessionId, records) => planRollback((seq, index) => readDiff(sessionId, seq, index), records);
+  const plan = (sessionId, records) => planRewind((seq, index) => readDiff(sessionId, seq, index), records);
 
   async function forkOrCreate(sessionId, boundary, meta) {
     if (boundary !== undefined) {
@@ -147,7 +147,7 @@ export function apply(ctx) {
     const sessionId = String(request?.sessionId ?? '');
     const action = request?.action;
     if (action !== 'delete' && action !== 'edit') throw new Error('操作类型无效。');
-    const withFiles = request?.rollbackFiles === true;
+    const withFiles = request?.rewindFiles === true;
     const { inspection, cut, records } = await load(sessionId, request?.seq);
     if (cut.hasOpenTurn) throw new Error('请先停止当前运行，再编辑或删除消息。');
     if (action === 'edit' && cut.content.some((block) => block.type !== 'text')) throw new Error('含附件的消息暂时只能删除，不能编辑。');
@@ -164,7 +164,7 @@ export function apply(ctx) {
       if (records.some((record) => record.summary)) {
         if (!inspection.meta.cwd) throw new Error('这个会话没有工作区，只能只回滚消息。');
         const targets = await plan(sessionId, records);
-        const applied = await applyRollback(targets);
+        const applied = await applyRewind(targets);
         undo = applied.undo;
         restored = applied.written;
       }
@@ -280,16 +280,16 @@ export function apply(ctx) {
       const rpcId = typeof envelope?.rpcId === 'string' ? envelope.rpcId : 'invalid-request';
       const reply = (result) => send(response, 200, { type: 'server-response', rpcId, result });
       if (envelope?.type !== 'client-request' || envelope.method !== endpoint) {
-        reply({ ok: false, error: { code: 'message-rollback/bad-request', message: '请求格式无效。', details: {} } });
+        reply({ ok: false, error: { code: 'message-rewind/bad-request', message: '请求格式无效。', details: {} } });
         return;
       }
       try {
         reply({ ok: true, value: await dispatch(endpoint, envelope.payload) });
       } catch (error) {
-        reply({ ok: false, error: { code: 'message-rollback/failed', message: text(error), details: {} } });
+        reply({ ok: false, error: { code: 'message-rewind/failed', message: text(error), details: {} } });
       }
   }
 
-  ctx.effect(registerRoute, 'message-rollback: rpc route');
+  ctx.effect(registerRoute, 'message-rewind: rpc route');
 }
 

@@ -6,11 +6,11 @@
   "author": "xCube007",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xCube007/dsh-message-rollback.git"
+    "url": "git+https://github.com/xCube007/dsh-message-rewind.git"
   },
-  "homepage": "https://github.com/xCube007/dsh-message-rollback#readme",
+  "homepage": "https://github.com/xCube007/dsh-message-rewind#readme",
   "bugs": {
-    "url": "https://github.com/xCube007/dsh-message-rollback/issues"
+    "url": "https://github.com/xCube007/dsh-message-rewind/issues"
   },
   "keywords": ["deepseek", "deepseek-harness", "dsh", "dsh-plugin", "message", "rewind", "rollback", "edit"],
   "type": "module",
@@ -22,7 +22,7 @@
   },
   "files": [
     "index.js",
-    "rollback.js",
+    "rewind.js",
     "files.js",
     "client.js",
     "cordis.patch.yml",
@@ -33,7 +33,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node rollback.test.js && node files.test.js && node client.test.js"
+    "test": "node rewind.test.js && node files.test.js && node client.test.js"
   },
   "publishConfig": {
     "access": "public"

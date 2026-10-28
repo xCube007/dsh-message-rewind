@@ -4,8 +4,8 @@ window.__ModuleLoader__.load({
     const React = require('react');
     const primitives = require('@deepseek-ai/dsh-client-ui-primitives');
     const h = React.createElement;
-    const NS = 'message-rollback';
-    const CHANNEL = '/message-rollback';
+    const NS = 'message-rewind';
+    const CHANNEL = '/message-rewind';
 
     const zh = {
       edit: '编辑并重发', remove: '删除这条消息及其后的对话', copy: '复制', copied: '已复制',
@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
       queued: 'Queued prompts are discarded along with the deleted record.',
       noGit: 'This workspace is not inside a Git repository, so only files touched by DSH write/edit tools are recorded; files changed by shell commands cannot be rolled back. Run git init in this directory to record everything.',
       attachments: 'Messages with attachments can only be deleted, not edited',
-      empty: 'Message cannot be empty', failed: 'Operation failed. Please try again.', dialog: 'Message rollback',
+      empty: 'Message cannot be empty', failed: 'Operation failed. Please try again.', dialog: 'Message rewind',
     };
 
     const css = `
@@ -113,7 +113,7 @@ window.__ModuleLoader__.load({
         try {
           install(ctx);
         } catch (error) {
-          console.error('[message-rollback] client half failed to install', error);
+          console.error('[message-rewind] client half failed to install', error);
         }
       },
     };
@@ -148,7 +148,7 @@ window.__ModuleLoader__.load({
         const close = () => { if (!current || current.busy) return; publish(null); };
         const patch = (fields) => { if (current) publish({ ...current, ...fields }); };
 
-        async function execute(rollbackFiles) {
+        async function execute(rewindFiles) {
           const request = current;
           if (!request || request.busy) return;
           patch({ busy: true, error: null });
@@ -158,7 +158,7 @@ window.__ModuleLoader__.load({
               seq: request.seq,
               action: request.kind,
               text: request.text,
-              rollbackFiles,
+              rewindFiles,
             });
             if (!result || typeof result.sessionId !== 'string') throw new Error(t('failed'));
             publish(null);
@@ -204,7 +204,7 @@ window.__ModuleLoader__.load({
           void check();
         }
 
-        function RollbackDialog() {
+        function RewindDialog() {
           const dialog = React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
           const [text, setText] = React.useState('');
           const key = dialog ? `${dialog.sessionId}:${dialog.seq}:${dialog.kind}` : null;
@@ -319,7 +319,7 @@ window.__ModuleLoader__.load({
         }
 
         ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'user' }, UserActions));
-        ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'message-rollback.dialog' }, RollbackDialog));
+        ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'message-rewind.dialog' }, RewindDialog));
       }
     };
   },

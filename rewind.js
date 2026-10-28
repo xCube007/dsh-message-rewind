@@ -1,5 +1,5 @@
 /**
- * Pure history math for message rollback: where to cut, what the cut removed,
+ * Pure history math for message rewind: where to cut, what the cut removed,
  * and how to undo a recorded file diff. Kept free of Cordis so it can be tested.
  */
 

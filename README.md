@@ -1,4 +1,4 @@
-# dsh-message-rollback
+# dsh-message-rewind
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的消息编辑与回滚插件：在你发出的每条消息气泡下方、复制按钮左边加一个 **编辑** 和 **删除**，删除会连带这条消息之后的所有对话，并可选把那一轮产生/修改/删除的文件一起回滚。
 
@@ -34,7 +34,7 @@
 
    ```yaml
    - insert:
-       - id: message-rollback
+       - id: message-rewind
          name: 'dsh-message-rewind'
    ```
 
@@ -43,16 +43,16 @@
 ### 从源码安装（开发/魔改用）
 
 ```bash
-git clone https://github.com/xCube007/dsh-message-rollback.git D:/Code/dsh-message-rollback
+git clone https://github.com/xCube007/dsh-message-rewind.git D:/Code/dsh-message-rewind
 ```
 
 把上面第 1 步的依赖换成链接形式，其余步骤相同：
 
 ```json
-"dsh-message-rewind": "link:D:/Code/dsh-message-rollback"
+"dsh-message-rewind": "link:D:/Code/dsh-message-rewind"
 ```
 
-装好后 `dsh` 启动日志里应出现 `message-rollback` 这一行且状态为 active；刷新页面后，自己发的消息气泡下方会出现「编辑 / 删除 / 复制」三个按钮。
+装好后 `dsh` 启动日志里应出现 `message-rewind` 这一行且状态为 active；刷新页面后，自己发的消息气泡下方会出现「编辑 / 删除 / 复制」三个按钮。
 
 
 ## 使用
@@ -87,14 +87,14 @@ git clone https://github.com/xCube007/dsh-message-rollback.git D:/Code/dsh-messa
 
 - **通信不走自定义 Typert Remote**：第三方插件声明自定义命名空间不会自动生成远端绑定，客户端会一直 `pending`，把 web boot 拖死。
 - **也不走 `connection.rpc.handle()`**：Cordis 的服务代理只在**方法调用**时把 `this.ctx` 绑到调用方上下文，而 `connection.rpc` 是 getter，闭包里捕获的是 connection 插件自己的 ctx —— 它没有 `inject: webServer`，注册时会抛 `cannot get property "webServer" without inject`。
-- 最终做法：`ctx.webServer.register({ kind: 'prefix', path: '/message-rollback' })` 自建路由，手写 `client-request` / `server-response` 信封，鉴权复用 `ctx.connection.admit(request)`；客户端用官方的 `ctx.connection.rpc.call(channel, endpoint, payload)` 调用，两端信封天然对齐。
+- 最终做法：`ctx.webServer.register({ kind: 'prefix', path: '/message-rewind' })` 自建路由，手写 `client-request` / `server-response` 信封，鉴权复用 `ctx.connection.admit(request)`；客户端用官方的 `ctx.connection.rpc.call(channel, endpoint, payload)` 调用，两端信封天然对齐。
 - UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`），并复用 `@deepseek-ai/dsh-client-ui-primitives` 的图标与 Tooltip，气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，保证视觉一致。
 
 ## 目录结构
 
 ```
 index.js            Host 端：路由、鉴权、inspect/execute/purge、会话 fork 与清理
-rollback.js         纯函数：切点计算、反向应用 diff、重建 diff 某一侧
+rewind.js           纯函数：切点计算、反向应用 diff、重建 diff 某一侧
 files.js            文件回滚：计划（只读校验）→ 落盘 → 失败自动撤销
 client.js           浏览器端：消息气泡actions、确认/编辑弹窗
 locale/{zh,en}.json 插件显示名与描述
@@ -107,7 +107,7 @@ cordis.patch.yml    bundle patch
 无外部依赖，Node 直接运行：
 
 ```bash
-node rollback.test.js   # 切点 / diff 逆向数学
+node rewind.test.js   # 切点 / diff 逆向数学
 node files.test.js      # 文件回滚：新建、删除、修改、无结尾换行、冲突拒绝、跨轮回卷、undo
 node client.test.js     # 客户端：用 stub React 跑完整交互（渲染按钮 → 编辑 → inspect → execute → purge）
 ```

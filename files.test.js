@@ -1,5 +1,5 @@
 /**
- * File-rollback self-check against a real temporary directory. The recorded
+ * File-rewind self-check against a real temporary directory. The recorded
  * diffs are handcrafted to match what `dsh-workspace-changes` produces: it diffs
  * newline-terminated text with jsdiff, so every hunk line carries its `\n`, and a
  * deletion is `before: true, after: false`.
@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { promises as fsp } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { planRollback, applyRollback, invert } from './files.js';
+import { planRewind, applyRewind, invert } from './files.js';
 
 let passed = 0;
 const check = (label, fn) => fn().then(() => { passed += 1; }, (error) => { throw new Error(`${label}: ${error.message}`); });
@@ -32,9 +32,9 @@ const deletedBefore = 'one\ntwo\n';
 const deletedDiff = textDiff(deletedName, true, false, [{ oldStart: 1, oldLines: 2, newStart: 0, newLines: 0, lines: ['-one\n', '-two\n'] }]);
 await check('deleted file is recreated', async () => {
   assert.deepEqual(await readExists(deletedName), null);
-  const targets = await planRollback(readDiffFrom({ '1:0': deletedDiff }), recordsFor([{ seq: 1, files: [{ path: deletedName, display: deletedName }] }]));
+  const targets = await planRewind(readDiffFrom({ '1:0': deletedDiff }), recordsFor([{ seq: 1, files: [{ path: deletedName, display: deletedName }] }]));
   assert.deepEqual([...targets.values()][0].original, { exists: true, text: deletedBefore });
-  await applyRollback(targets);
+  await applyRewind(targets);
   assert.equal(await fsp.readFile(abs(deletedName), 'utf8'), deletedBefore);
 });
 
@@ -43,9 +43,9 @@ const createdName = 'created.txt';
 const createdDiff = textDiff(createdName, false, true, [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, lines: ['+abc'] }]);
 await check('created file is removed', async () => {
   await fsp.writeFile(abs(createdName), 'abc', 'utf8');
-  const targets = await planRollback(readDiffFrom({ '2:0': createdDiff }), recordsFor([{ seq: 2, files: [{ path: createdName, display: createdName }] }]));
+  const targets = await planRewind(readDiffFrom({ '2:0': createdDiff }), recordsFor([{ seq: 2, files: [{ path: createdName, display: createdName }] }]));
   assert.deepEqual([...targets.values()][0].original, { exists: false, text: null });
-  await applyRollback(targets);
+  await applyRewind(targets);
   await assert.rejects(() => fsp.stat(abs(createdName)));
 });
 
@@ -54,8 +54,8 @@ const editedName = 'edited.txt';
 const editedDiff = textDiff(editedName, true, true, [{ oldStart: 1, oldLines: 3, newStart: 1, newLines: 3, lines: [' zero\n', ' one\n', '-two\n', '+TWO\n'] }]);
 await check('modified file is reverted', async () => {
   await fsp.writeFile(abs(editedName), 'zero\none\nTWO\n', 'utf8');
-  const targets = await planRollback(readDiffFrom({ '3:0': editedDiff }), recordsFor([{ seq: 3, files: [{ path: editedName, display: editedName }] }]));
-  await applyRollback(targets);
+  const targets = await planRewind(readDiffFrom({ '3:0': editedDiff }), recordsFor([{ seq: 3, files: [{ path: editedName, display: editedName }] }]));
+  await applyRewind(targets);
   assert.equal(await fsp.readFile(abs(editedName), 'utf8'), 'zero\none\ntwo\n');
 });
 
@@ -64,8 +64,8 @@ const bareName = 'bare.txt';
 const bareDiff = textDiff(bareName, true, true, [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 2, lines: [' x\n', '+y'] }]);
 await check('unterminated file is reverted', async () => {
   await fsp.writeFile(abs(bareName), 'x\ny', 'utf8');
-  const targets = await planRollback(readDiffFrom({ '4:0': bareDiff }), recordsFor([{ seq: 4, files: [{ path: bareName, display: bareName }] }]));
-  await applyRollback(targets);
+  const targets = await planRewind(readDiffFrom({ '4:0': bareDiff }), recordsFor([{ seq: 4, files: [{ path: bareName, display: bareName }] }]));
+  await applyRewind(targets);
   assert.equal(await fsp.readFile(abs(bareName), 'utf8'), 'x\n');
 });
 
@@ -73,7 +73,7 @@ await check('unterminated file is reverted', async () => {
 await check('conflicting later edit is refused', async () => {
   await fsp.writeFile(abs(editedName), 'zero\none\nTHREE\n', 'utf8');
   await assert.rejects(
-    () => planRollback(readDiffFrom({ '5:0': editedDiff }), recordsFor([{ seq: 5, files: [{ path: editedName, display: editedName }] }])),
+    () => planRewind(readDiffFrom({ '5:0': editedDiff }), recordsFor([{ seq: 5, files: [{ path: editedName, display: editedName }] }])),
     /edited\.txt：.*(在记录之后又被修改过|文件版本已改变)/,
   );
 });
@@ -84,22 +84,22 @@ const chainedCreated = textDiff(chainedName, false, true, [{ oldStart: 0, oldLin
 const chainedEdited = textDiff(chainedName, true, true, [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 2, lines: [' abc\n', '+def\n'] }]);
 await check('multi-turn path unwinds to absent', async () => {
   await fsp.writeFile(abs(chainedName), 'abc\ndef\n', 'utf8');
-  const targets = await planRollback(
+  const targets = await planRewind(
     readDiffFrom({ '6:0': chainedCreated, '7:0': chainedEdited }),
     recordsFor([
       { seq: 6, files: [{ path: chainedName, display: chainedName }] },
       { seq: 7, files: [{ path: chainedName, display: chainedName }] },
     ]),
   );
-  await applyRollback(targets);
+  await applyRewind(targets);
   await assert.rejects(() => fsp.stat(abs(chainedName)));
 });
 
-// --- undo restores exactly what rollback replaced --------------------------
-await check('undo restores the pre-rollback state', async () => {
+// --- undo restores exactly what the rewind replaced --------------------------
+await check('undo restores the pre-rewind state', async () => {
   await fsp.writeFile(abs(editedName), 'zero\none\nTWO\n', 'utf8');
-  const targets = await planRollback(readDiffFrom({ '8:0': editedDiff }), recordsFor([{ seq: 8, files: [{ path: editedName, display: editedName }] }]));
-  const applied = await applyRollback(targets);
+  const targets = await planRewind(readDiffFrom({ '8:0': editedDiff }), recordsFor([{ seq: 8, files: [{ path: editedName, display: editedName }] }]));
+  const applied = await applyRewind(targets);
   assert.equal(await fsp.readFile(abs(editedName), 'utf8'), 'zero\none\ntwo\n');
   await applied.undo();
   assert.equal(await fsp.readFile(abs(editedName), 'utf8'), 'zero\none\nTWO\n');
@@ -108,7 +108,7 @@ await check('undo restores the pre-rollback state', async () => {
 // --- a path outside the recorded workspace is refused ----------------------
 await check('path outside the workspace is refused', async () => {
   await assert.rejects(
-    () => planRollback(readDiffFrom({}), recordsFor([{ seq: 9, files: [{ path: '../escape.txt', display: '../escape.txt' }] }])),
+    () => planRewind(readDiffFrom({}), recordsFor([{ seq: 9, files: [{ path: '../escape.txt', display: '../escape.txt' }] }])),
     /不在该轮工作区内/,
   );
 });

@@ -119,7 +119,7 @@ globalThis.console.error = originalError;
 assert.equal(styleTags.length, 1, 'one stylesheet is inserted');
 assert.deepEqual(calls.filter((call) => call[0] === 'locale.register').map((call) => call[2]), ['zh', 'en']);
 const nodeRegistration = registrations.find((entry) => entry.options.key === 'user');
-const overlayRegistration = registrations.find((entry) => entry.options.id === 'message-rollback.dialog');
+const overlayRegistration = registrations.find((entry) => entry.options.id === 'message-rewind.dialog');
 assert.ok(nodeRegistration, 'the user chat node renderer is registered');
 assert.ok(overlayRegistration, 'the overlay dialog is registered');
 
@@ -183,7 +183,7 @@ assert.equal(deleteButtons.length, 2, 'cancel plus messages-only');
 deleteButtons.at(-1).props.onClick();
 await new Promise((resolve) => setImmediate(resolve));
 const execute = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1);
-assert.deepEqual(execute[3], { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rollbackFiles: false });
+assert.deepEqual(execute[3], { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rewindFiles: false });
 await new Promise((resolve) => setImmediate(resolve));
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession').at(-1), ['openSession', 'child-1']);
 

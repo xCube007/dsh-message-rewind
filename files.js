@@ -1,5 +1,5 @@
 /**
- * File rollback: turn one recorded change list back into the pre-cut file state.
+ * File rewind: turn one recorded change list back into the pre-cut file state.
  *
  * The recorder compares each file at turn start and turn end, so a deletion is
  * representable — `before: true, after: false` — and restoring it means writing
@@ -8,7 +8,7 @@
  */
 import { promises as fsp } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
-import { inversePatch, textSide } from './rollback.js';
+import { inversePatch, textSide } from './rewind.js';
 
 const MAX_TEXT_BYTES = 4 * 1024 * 1024;
 
@@ -73,7 +73,7 @@ async function pruneEmptyParents(path, root) {
  * @param records - `workspace/changes` records in ascending sequence order.
  * @returns per-path plan carrying the current state and the target state.
  */
-export async function planRollback(readDiff, records) {
+export async function planRewind(readDiff, records) {
   const targets = new Map();
   for (const { seq, summary } of records) {
     if (!summary) continue;
@@ -121,10 +121,10 @@ async function restoreTargets(done) {
 
 /**
  * Write every planned pre-cut content and return an undo restoring the current state.
- * @param targets - the plan from {@link planRollback}.
+ * @param targets - the plan from {@link planRewind}.
  * @returns the number of files written and the undo, or throws after undoing a partial write.
  */
-export async function applyRollback(targets) {
+export async function applyRewind(targets) {
   const done = [];
   try {
     for (const target of targets.values()) {

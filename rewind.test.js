@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { prepareCut, inversePatch, textSide, terminated } from './rollback.js';
+import { prepareCut, inversePatch, textSide, terminated } from './rewind.js';
 
 // Real session order: a turn opens, then the user message lands inside it.
 const base = [
@@ -72,5 +72,5 @@ assert.equal(terminated(''), '');
 assert.equal(inversePatch('abc', [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, lines: ['+abc'] }]), '');
 const unterminated = [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 2, lines: [' x\n', '+y'] }];
 assert.equal(inversePatch('x\ny', unterminated), 'x\n');
-console.log('rollback self-check passed');
+console.log('rewind self-check passed');
 
