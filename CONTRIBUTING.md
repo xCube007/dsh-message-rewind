@@ -17,11 +17,12 @@ git clone https://github.com/xCube007/dsh-message-rewind.git
 
 ```bash
 node rewind.test.js   # 切点 / diff 逆向数学
-node files.test.js    # 文件回滚：新建、删除、修改、无结尾换行、冲突拒绝、跨轮回卷、undo
-node client.test.js   # 客户端：用 stub React 跑完整交互（渲染按钮 → 编辑 → inspect → execute → purge）
+node files.test.js    # 文件回滚：新建、删除、修改、无结尾换行、BOM、冲突拒绝、跨轮回卷、undo
+node index.test.js    # Host 端：会话目录定位与越权路径拒绝（purge 的前置保护）
+node client.test.js   # 客户端：用 stub React 跑主交互（渲染按钮 → 编辑 → inspect → execute → purge → 错误本地化）
 ```
 
-`npm test` 会依次跑这三个文件。
+`npm test` 会依次跑这四个文件。
 
 ## 目录结构
 
@@ -50,6 +51,8 @@ cordis.patch.yml    bundle patch
 - **通信不走自定义 Typert Remote**：第三方插件声明自定义命名空间不会自动生成远端绑定，客户端会一直 `pending`，把 web boot 拖死。
 - **也不走 `connection.rpc.handle()`**：Cordis 的服务代理只在**方法调用**时把 `this.ctx` 绑到调用方上下文，而 `connection.rpc` 是 getter，闭包里捕获的是 connection 插件自己的 ctx —— 它没有 `inject: webServer`，注册时会抛 `cannot get property "webServer" without inject`。
 - 最终做法：`ctx.webServer.register({ kind: 'prefix', path: '/message-rewind' })` 自建路由，手写 `client-request` / `server-response` 信封，鉴权复用 `ctx.connection.admit(request)`；客户端用官方的 `ctx.connection.rpc.call(channel, endpoint, payload)` 调用，两端信封天然对齐。
+- **purge 的删除目标必须自己证明安全**：`sessionId` 先按 `session-<uuid>` 形状校验，再用 `realpath` 把命中目录限定在 sessions root 内（只认 `root/<id>` 与 `root/<slug>/<id>` 两层），绝不把拼接结果直接交给 `fs.rm`。
+- Host 侧的失败都带 `rewindCode`，客户端按 code 查 zh/en 字典，拿不到词条才回退到 Host 的原文。
 - UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`），并复用 `@deepseek-ai/dsh-client-ui-primitives` 的图标与 Tooltip，气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，保证视觉一致。
 
 ## 发布到 npm

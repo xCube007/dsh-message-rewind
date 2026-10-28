@@ -33,7 +33,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node rewind.test.js && node files.test.js && node client.test.js"
+    "test": "node rewind.test.js && node files.test.js && node index.test.js && node client.test.js"
   },
   "publishConfig": {
     "access": "public"

@@ -4,6 +4,17 @@
  */
 
 /**
+ * Attach a stable code to a user-facing failure so the Client can localize it
+ * while the Host keeps a readable fallback message.
+ * @param code - stable identifier the Client maps to a dictionary entry.
+ * @param message - human-readable fallback text.
+ * @returns the tagged error.
+ */
+export function userError(code, message) {
+  return Object.assign(new Error(message), { rewindCode: code });
+}
+
+/**
  * Locate one user message and the branch point just before its turn.
  * @param events - a session's event prefix, ordered by `seq`.
  * @param seq - the exact `seq` of the user message to cut at.
@@ -11,12 +22,12 @@
  *   whether the cut spans an open turn, and the `workspace/changes` sequences removed by the cut.
  */
 export function prepareCut(events, seq) {
-  if (!Number.isSafeInteger(seq) || seq < 0) throw new Error('消息位置无效。');
+  if (!Number.isSafeInteger(seq) || seq < 0) throw userError('invalid-message', '消息位置无效。');
   const index = new Map(events.map((event, position) => [event.seq, position]));
   const position = index.get(seq);
   const target = position === undefined ? undefined : events[position];
-  if (target === undefined) throw new Error('这条消息已不在当前对话记录里，请刷新后重试。');
-  if (target.type !== 'user/message' || target.data?.source?.kind !== 'user') throw new Error('只能编辑或删除你发送的消息。');
+  if (target === undefined) throw userError('stale-message', '这条消息已不在当前对话记录里，请刷新后重试。');
+  if (target.type !== 'user/message' || target.data?.source?.kind !== 'user') throw userError('not-user-message', '只能编辑或删除你发送的消息。');
   const content = structuredClone(target.data.content ?? []);
   let boundary = position > 0 ? events[position - 1].seq : undefined;
   for (let cursor = position - 1; cursor >= 0; cursor--) {
@@ -68,23 +79,23 @@ export function inversePatch(current, hunks) {
   let cursor = 0;
   for (const hunk of hunks) {
     const start = hunk.newStart === 0 ? 0 : hunk.newStart - 1;
-    if (!Number.isSafeInteger(start) || start < cursor || start > lines.length) throw new Error('文件版本已改变，未回滚任何文件。');
+    if (!Number.isSafeInteger(start) || start < cursor || start > lines.length) throw userError('file-changed', '文件版本已改变，未回滚任何文件。');
     output.push(...lines.slice(cursor, start));
     cursor = start;
     for (const line of hunk.lines) {
       const marker = line[0];
       const body = terminated(line.slice(1));
-      if (marker === '\\') throw new Error('无结尾换行的文件差异暂不支持，未回滚任何文件。');
+      if (marker === '\\') throw userError('unsupported-diff', '无结尾换行的文件差异暂不支持，未回滚任何文件。');
       if (marker === '+') {
-        if (lines[cursor] !== body) throw new Error('文件版本已改变，未回滚任何文件。');
+        if (lines[cursor] !== body) throw userError('file-changed', '文件版本已改变，未回滚任何文件。');
         cursor++;
       } else if (marker === '-') {
         output.push(body);
       } else if (marker === ' ') {
-        if (lines[cursor] !== body) throw new Error('文件版本已改变，未回滚任何文件。');
+        if (lines[cursor] !== body) throw userError('file-changed', '文件版本已改变，未回滚任何文件。');
         output.push(lines[cursor++]);
       } else {
-        throw new Error('文件差异无法验证，未回滚任何文件。');
+        throw userError('unsupported-diff', '文件差异无法验证，未回滚任何文件。');
       }
     }
   }
@@ -108,7 +119,7 @@ export function textSide(exists, hunks, after) {
     }
   }
   if (!exists) {
-    if (lines.length !== 0) throw new Error('文件差异与文件是否存在不一致。');
+    if (lines.length !== 0) throw userError('unsupported-diff', '文件差异与文件是否存在不一致。');
     return null;
   }
   return lines.join('');

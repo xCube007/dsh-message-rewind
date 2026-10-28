@@ -8,7 +8,7 @@
  */
 import { promises as fsp } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
-import { inversePatch, textSide } from './rewind.js';
+import { inversePatch, terminated, textSide, userError } from './rewind.js';
 
 const MAX_TEXT_BYTES = 4 * 1024 * 1024;
 
@@ -26,15 +26,18 @@ export async function readFileState(path, display) {
     info = await fsp.stat(path);
   } catch (error) {
     if (error?.code === 'ENOENT') return { exists: false, text: null };
-    throw new Error(`无法读取 ${display}：${text(error)}`);
+    throw userError('file-unreadable', `无法读取 ${display}：${text(error)}`);
   }
-  if (!info.isFile()) throw new Error(`${display} 不是普通文件，未回滚任何文件。`);
-  if (info.size > MAX_TEXT_BYTES) throw new Error(`${display} 超过文本回滚上限，未回滚任何文件。`);
+  if (!info.isFile()) throw userError('file-unreadable', `${display} 不是普通文件，未回滚任何文件。`);
+  if (info.size > MAX_TEXT_BYTES) throw userError('file-too-large', `${display} 超过文本回滚上限，未回滚任何文件。`);
   const bytes = await fsp.readFile(path);
   try {
-    return { exists: true, text: new TextDecoder('utf-8', { fatal: true }).decode(bytes) };
+    // The recorder reads text with `readFile(…, 'utf8')`, which keeps a BOM.
+    // TextDecoder strips it by default, so keep it here or every context line
+    // of a BOM file compares unequal and a silent rewrite drops the bytes.
+    return { exists: true, text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes) };
   } catch {
-    throw new Error(`${display} 不是 UTF-8 文本，未回滚任何文件。`);
+    throw userError('file-binary', `${display} 不是 UTF-8 文本，未回滚任何文件。`);
   }
 }
 
@@ -45,9 +48,15 @@ export async function readFileState(path, display) {
  * @returns the state this turn started from.
  */
 export function invert(state, diff) {
-  if (state.exists !== diff.after) throw new Error(`${diff.display} 在记录之后又被修改过，已停止回滚。`);
+  if (state.exists !== diff.after) throw userError('file-changed', `${diff.display} 在记录之后又被修改过，已停止回滚。`);
   // A file this turn created has nothing to invert: the pre-turn state is absence.
-  if (!diff.before) return { exists: false, text: null };
+  // Its current content is still compared, so a later edit is refused instead of
+  // being deleted silently.
+  if (!diff.before) {
+    const expected = textSide(true, diff.hunks, true) ?? '';
+    if (terminated(state.text ?? '') !== expected) throw userError('file-changed', `${diff.display} 在记录之后又被修改过，已停止回滚。`);
+    return { exists: false, text: null };
+  }
   // A file this turn deleted restores from the removed lines alone.
   if (!diff.after) return { exists: true, text: textSide(true, diff.hunks, false) };
   return { exists: true, text: inversePatch(state.text ?? '', diff.hunks) };
@@ -81,7 +90,7 @@ export async function planRewind(readDiff, records) {
     for (let index = 0; index < summary.files.length; index += 1) {
       const file = summary.files[index];
       const path = resolve(root, file.path);
-      if (!insideRoot(root, path)) throw new Error(`${file.display} 不在该轮工作区内，未回滚任何文件。`);
+      if (!insideRoot(root, path)) throw userError('path-escape', `${file.display} 不在该轮工作区内，未回滚任何文件。`);
       if (!targets.has(path)) targets.set(path, { path, display: file.display, root, steps: [] });
       targets.get(path).steps.push({ seq, index });
     }
@@ -95,7 +104,7 @@ export async function planRewind(readDiff, records) {
       try {
         state = invert(state, await readDiff(step.seq, step.index));
       } catch (error) {
-        throw new Error(`${target.display}：${text(error)}`);
+        throw userError(error?.rewindCode ?? 'file-rewind', `${target.display}：${text(error)}`);
       }
     }
     target.original = state;
@@ -139,13 +148,13 @@ export async function applyRewind(targets) {
     }
   } catch (error) {
     const failures = await restoreTargets(done);
-    if (failures.length) throw new Error(`文件回滚中断，以下文件需人工检查：${failures.join('；')}`);
+    if (failures.length) throw userError('file-restore-failed', `文件回滚中断，以下文件需人工检查：${failures.join('；')}`);
     throw error;
   }
   for (const target of done) if (!target.original.exists) await pruneEmptyParents(target.path, target.root);
   const undo = async () => {
     const failures = await restoreTargets(done);
-    if (failures.length) throw new Error(`文件未能恢复原状，请人工检查：${failures.join('；')}`);
+    if (failures.length) throw userError('file-restore-failed', `文件未能恢复原状，请人工检查：${failures.join('；')}`);
   };
   return { written: done.length, undo };
 }

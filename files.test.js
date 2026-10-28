@@ -69,6 +69,34 @@ await check('unterminated file is reverted', async () => {
   assert.equal(await fsp.readFile(abs(bareName), 'utf8'), 'x\n');
 });
 
+// --- a UTF-8 BOM survives the round trip -----------------------------------
+const bomName = 'bom.txt';
+const bomDiff = textDiff(bomName, true, true, [{ oldStart: 1, oldLines: 2, newStart: 1, newLines: 2, lines: [' \uFEFFone\n', '-two\n', '+TWO\n'] }]);
+await check('utf-8 BOM file is reverted without losing the BOM', async () => {
+  const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
+  await fsp.writeFile(abs(bomName), Buffer.concat([bom, Buffer.from('one\nTWO\n', 'utf8')]));
+  const targets = await planRewind(readDiffFrom({ '10:0': bomDiff }), recordsFor([{ seq: 10, files: [{ path: bomName, display: bomName }] }]));
+  await applyRewind(targets);
+  const bytes = await fsp.readFile(abs(bomName));
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xEF, 0xBB, 0xBF]);
+  assert.equal(bytes.toString('utf8'), '\uFEFFone\ntwo\n');
+});
+
+// --- a created file edited after its turn is refused, not deleted ----------
+const createdLaterName = 'created-later.txt';
+const createdLaterDiff = textDiff(createdLaterName, false, true, [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, lines: ['+original\n'] }]);
+await check('created file edited later is refused', async () => {
+  await fsp.writeFile(abs(createdLaterName), 'original\nplus a manual edit\n', 'utf8');
+  await assert.rejects(
+    () => planRewind(readDiffFrom({ '11:0': createdLaterDiff }), recordsFor([{ seq: 11, files: [{ path: createdLaterName, display: createdLaterName }] }])),
+    /created-later\.txt：.*在记录之后又被修改过/,
+  );
+  await fsp.writeFile(abs(createdLaterName), 'original\n', 'utf8');
+  const targets = await planRewind(readDiffFrom({ '12:0': createdLaterDiff }), recordsFor([{ seq: 12, files: [{ path: createdLaterName, display: createdLaterName }] }]));
+  await applyRewind(targets);
+  await assert.rejects(() => fsp.stat(abs(createdLaterName)));
+});
+
 // --- a file changed after that turn refuses instead of guessing -------------
 await check('conflicting later edit is refused', async () => {
   await fsp.writeFile(abs(editedName), 'zero\none\nTHREE\n', 'utf8');
@@ -116,6 +144,7 @@ await check('path outside the workspace is refused', async () => {
 // --- invert is a pure total function on absence ----------------------------
 assert.deepEqual(invert({ exists: false, text: null }, deletedDiff), { exists: true, text: deletedBefore });
 assert.deepEqual(invert({ exists: true, text: 'abc' }, createdDiff), { exists: false, text: null });
+assert.throws(() => invert({ exists: true, text: 'abc changed' }, createdDiff), /在记录之后又被修改过/);
 
 async function readExists(name) {
   try {

@@ -22,6 +22,31 @@ window.__ModuleLoader__.load({
       noGit: '当前工作区不在 Git 仓库内：只能记录 DSH 文件工具（写/改）动过的文件，shell 命令删除或修改的文件无法回滚。在这个目录执行 git init 后即可完整记录。',
       attachments: '含附件的消息暂时只能删除，不能编辑',
       empty: '消息不能为空', failed: '操作失败，请重试。', dialog: '消息回滚',
+      'error.invalid-message': '消息位置无效。',
+      'error.stale-message': '这条消息已不在当前对话记录里，请刷新后重试。',
+      'error.not-user-message': '只能编辑或删除你发送的消息。',
+      'error.file-changed': '文件在记录之后又被修改过，已停止回滚，未覆盖任何文件。',
+      'error.unsupported-diff': '这份文件差异暂不支持回滚。',
+      'error.file-unreadable': '有文件无法读取，未回滚任何文件。',
+      'error.file-too-large': '有文件超过文本回滚上限，未回滚任何文件。',
+      'error.file-binary': '有文件不是 UTF-8 文本，未回滚任何文件。',
+      'error.file-rewind': '文件回滚失败，未写入任何文件。',
+      'error.path-escape': '有文件不在该轮工作区内，未回滚任何文件。',
+      'error.file-restore-failed': '文件回滚中断，部分文件需人工检查。',
+      'error.snapshot-missing': '文件改动快照已不可用，未回滚任何文件。',
+      'error.binary-file': '只能回滚文本文件。',
+      'error.coarse-diff': '改动过大，无法安全回滚。',
+      'error.bad-action': '操作类型无效。',
+      'error.open-turn': '请先停止当前运行，再编辑或删除消息。',
+      'error.attachments': '含附件的消息暂时只能删除，不能编辑。',
+      'error.empty-message': '消息不能为空。',
+      'error.incomplete-snapshot': '部分文件改动快照已不可用，只能只回滚消息。',
+      'error.no-workspace': '这个会话没有工作区，只能只回滚消息。',
+      'error.invalid-session': '会话标识无效。',
+      'error.unknown-endpoint': '未知接口。',
+      'error.request-too-large': '请求体过大。',
+      'error.bad-request': '请求格式无效。',
+      'error.unknown': '操作失败，请重试。',
     };
     const en = {
       edit: 'Edit and resend', remove: 'Delete this message and every following turn', copy: 'Copy', copied: 'Copied',
@@ -38,6 +63,31 @@ window.__ModuleLoader__.load({
       noGit: 'This workspace is not inside a Git repository, so only files touched by DSH write/edit tools are recorded; files changed by shell commands cannot be rolled back. Run git init in this directory to record everything.',
       attachments: 'Messages with attachments can only be deleted, not edited',
       empty: 'Message cannot be empty', failed: 'Operation failed. Please try again.', dialog: 'Message rewind',
+      'error.invalid-message': 'Invalid message position.',
+      'error.stale-message': 'This message is no longer in the conversation. Refresh and try again.',
+      'error.not-user-message': 'Only messages you sent can be edited or deleted.',
+      'error.file-changed': 'A file changed after it was recorded, so nothing was rolled back.',
+      'error.unsupported-diff': 'This file diff cannot be rolled back.',
+      'error.file-unreadable': 'A file could not be read, so nothing was rolled back.',
+      'error.file-too-large': 'A file exceeds the text-rollback size limit, so nothing was rolled back.',
+      'error.file-binary': 'A file is not UTF-8 text, so nothing was rolled back.',
+      'error.file-rewind': 'File rollback failed; nothing was written.',
+      'error.path-escape': 'A file lies outside that turn\u2019s workspace, so nothing was rolled back.',
+      'error.file-restore-failed': 'File rollback was interrupted; some files need manual checking.',
+      'error.snapshot-missing': 'The recorded file snapshot is unavailable, so nothing was rolled back.',
+      'error.binary-file': 'Only text files can be rolled back.',
+      'error.coarse-diff': 'The change is too large to roll back safely.',
+      'error.bad-action': 'Invalid operation.',
+      'error.open-turn': 'Stop the running turn before editing or deleting messages.',
+      'error.attachments': 'Messages with attachments can only be deleted.',
+      'error.empty-message': 'The message cannot be empty.',
+      'error.incomplete-snapshot': 'Some file snapshots are unavailable; roll back messages only.',
+      'error.no-workspace': 'This conversation has no workspace; roll back messages only.',
+      'error.invalid-session': 'Invalid session id.',
+      'error.unknown-endpoint': 'Unknown endpoint.',
+      'error.request-too-large': 'The request body is too large.',
+      'error.bad-request': 'Invalid request.',
+      'error.unknown': 'Operation failed. Please try again.',
     };
 
     const css = `
@@ -135,8 +185,24 @@ window.__ModuleLoader__.load({
         }, `${NS}: dictionaries`);
         const t = (key) => ctx.locale.bind(NS)(key);
 
+        // Host failures carry a stable code; translate it and fall back to the
+        // Host's own message only when the dictionary has no entry.
+        const errorText = (error) => {
+          const code = error?.rewindCode;
+          if (typeof code === 'string') {
+            const key = `error.${code}`;
+            const translated = t(key);
+            if (translated !== key) return translated;
+          }
+          return error instanceof Error ? error.message : String(error);
+        };
+
         const remote = (endpoint, payload) => ctx.connection.rpc.call(CHANNEL, endpoint, payload).then((result) => {
-          if (!result || result.ok !== true) throw new Error(result?.error?.message ?? t('failed'));
+          if (!result || result.ok !== true) {
+            const error = new Error(result?.error?.message ?? t('failed'));
+            if (typeof result?.error?.details?.rewindCode === 'string') error.rewindCode = result.error.details.rewindCode;
+            throw error;
+          }
           return result.value;
         });
 
@@ -173,7 +239,7 @@ window.__ModuleLoader__.load({
                 .catch(() => {});
             }
           } catch (error) {
-            patch({ busy: false, error: error instanceof Error ? error.message : String(error) });
+            patch({ busy: false, error: errorText(error) });
           }
         }
 
@@ -191,7 +257,7 @@ window.__ModuleLoader__.load({
             }
             patch({ busy: false, details, phase: questions ? 'choice' : 'confirm' });
           } catch (error) {
-            patch({ busy: false, phase: request.kind === 'edit' ? 'edit' : 'confirm', error: error instanceof Error ? error.message : String(error) });
+            patch({ busy: false, phase: request.kind === 'edit' ? 'edit' : 'confirm', error: errorText(error) });
           }
         }
 
@@ -286,7 +352,7 @@ window.__ModuleLoader__.load({
           }), [data?.referenceLabels, data?.skillNames]);
           if (typeof data?.seq !== 'number') return null;
           if (typeof renderFactorySlot !== 'function') return h('div', { className: 'dmr-row' }, h('span', null, parts.text));
-          const attachmentBlocked = parts.rest.length > 0;
+          const attachmentBlocked = parts.attachments.length > 0 || parts.rest.length > 0;
           const copyText = () => {
             const write = primitives.writeClipboard;
             if (typeof write === 'function') { void write(parts.text).then((ok) => { if (ok) setCopied(true); }); return; }

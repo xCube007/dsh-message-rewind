@@ -153,6 +153,13 @@ assert.equal(editButton.props.className, 'dmr-action');
 assert.match(deleteButton.props.className, /dmr-danger/);
 assert.ok(renderUser(data, true).children[1].children[1].children[0].props.disabled, 'a running turn disables edit');
 
+// --- an attachment message disables edit just like the host does -----------
+const imageTicket = { attachmentId: 'img-1', mediaType: 'image/png', bytes: 1, width: 1, height: 1 };
+const imageTree = renderUser({ seq: 8, time: Date.now(), content: [{ type: 'image', attachment: imageTicket }] });
+const imageButtons = imageTree.children[1].children.filter(Boolean).slice(1).map((tooltip) => tooltip.children[0]);
+assert.equal(imageButtons[0].props.disabled, true, 'attachment messages disable edit');
+assert.equal(imageButtons[1].props.disabled, undefined, 'attachment messages stay deletable');
+
 // --- edit flow --------------------------------------------------------------
 const renderDialog = () => { react.__enter('dialog'); return overlayRegistration.component({}); };
 editButton.props.onClick();
@@ -186,6 +193,16 @@ const execute = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'ex
 assert.deepEqual(execute[3], { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rewindFiles: false });
 await new Promise((resolve) => setImmediate(resolve));
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession').at(-1), ['openSession', 'child-1']);
+
+// --- host failure codes are localized --------------------------------------
+ctx.connection.rpc.call = () => Promise.resolve({
+  ok: false,
+  error: { message: '请先停止当前运行', details: { rewindCode: 'open-turn' } },
+});
+deleteButton.props.onClick();
+await new Promise((resolve) => setImmediate(resolve));
+const failed = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-error').at(0);
+assert.equal(failed.children[0], 'message-rewind:error.open-turn');
 
 console.log('client self-check passed');
 
