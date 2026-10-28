@@ -1,0 +1,28 @@
+{
+  "name": "@local/dsh-message-rollback",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Edit user prompts, roll back subsequent turns, and optionally restore recorded file changes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xCube007/dsh-message-rollback.git"
+  },
+  "homepage": "https://github.com/xCube007/dsh-message-rollback#readme",
+  "keywords": ["deepseek", "harness", "dsh", "dsh-plugin", "message", "rollback", "edit"],
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "rollback.js", "files.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg"],
+  "scripts": {
+    "test": "node rollback.test.js && node files.test.js && node client.test.js"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web" }
+  }
+}
