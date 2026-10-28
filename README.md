@@ -1,26 +1,33 @@
 # dsh-message-rewind
 
-给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的消息编辑与回滚插件：在你发出的每条消息气泡下方、复制按钮左边加一个 **编辑** 和 **删除**，删除会连带这条消息之后的所有对话，并可选把那一轮产生/修改/删除的文件一起回滚。
+给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的消息气泡加两个按钮：**编辑**和**删除**。
+
+- 发错字了？改一下，直接从改后的内容重新开始，不用重开对话。
+- 说话越界了？删掉这条，它之后的所有对话一起消失。
+- 那一轮还改过文件？可以顺手把文件也还原到这条消息之前的样子。
 
 > A DSH plugin that adds **edit** and **delete** to your own message bubbles. Deleting truncates every following turn and can optionally roll the recorded file changes back.
 
 ---
 
-## 功能
+## 它能做什么
 
-- **编辑并重发**：直接改已发送的消息内容，然后以修改后的内容重新开始这一段对话。
-- **删除**：删掉这条消息及其后的全部对话。
-- **可选文件回滚**：如果被删除的对话里有文件改动，弹窗会让你选「只回滚消息」还是「同时回滚消息和文件」。
-- **保留后路**：回滚前的完整记录会被归档（可恢复），或按你的选择彻底删除。
-- 纯文本消息可编辑；带附件的消息只能删不能改；有未结束的轮次时会被拒绝，避免和正在跑的 turn 抢写。
+| 你想要的 | 插件怎么帮你 |
+| --- | --- |
+| 改掉已发送的消息 | 点消息气泡下方的铅笔，改完点「保存并重发」，这条消息之后的内容会被截断，然后按你改后的内容重新开始 |
+| 撤掉一条越界的消息 | 点垃圾桶，确认后这条消息连同它之后的所有对话一起删除 |
+| 连文件一起还原 | 删除/编辑时，如果那一轮动过文件，弹窗会让你选「只回滚消息」还是「同时回滚消息和文件」 |
+| 不打扰正在跑的任务 | 有未结束的轮次时直接拒绝操作，不会和正在执行的 turn 抢写 |
+
+只有你自己发出的消息才有这两个按钮；「复制」按钮仍在，位置不变。
 
 ## 安装
 
+需要能加载插件 bundle 的 DSH，Node.js ≥ 20。
+
 ### 从 npm 安装（推荐）
 
-包名 `dsh-message-rewind`（[npm](https://www.npmjs.com/package/dsh-message-rewind)）。
-
-1. 在 profile 的 `package.json` 里加依赖（`~/.dsh/profiles/<profile>/package.json`）：
+1. 在 profile 的 `package.json`（`~/.dsh/profiles/<profile>/package.json`）里加依赖：
 
    ```json
    {
@@ -30,7 +37,7 @@
    }
    ```
 
-2. 在 profile 的 `cordis.patch.yml` 里挂上这一行：
+2. 在同一个 profile 的 `cordis.patch.yml` 里挂上插件：
 
    ```yaml
    - insert:
@@ -38,103 +45,76 @@
          name: 'dsh-message-rewind'
    ```
 
-3. 在 profile 目录执行 `pnpm install`，然后重启 DSH（或在「设置 → 插件」里启用）。
+3. 在该 profile 目录执行 `pnpm install`，然后重启 DSH（或在「设置 → 插件」里启用）。
 
-### 从源码安装（开发/魔改用）
+### 从源码安装（想改代码时用）
 
 ```bash
 git clone https://github.com/xCube007/dsh-message-rewind.git D:/Code/dsh-message-rewind
 ```
 
-把上面第 1 步的依赖换成链接形式，其余步骤相同：
+依赖写成链接形式，其余步骤相同：
 
 ```json
 "dsh-message-rewind": "link:D:/Code/dsh-message-rewind"
 ```
 
-装好后 `dsh` 启动日志里应出现 `message-rewind` 这一行且状态为 active；刷新页面后，自己发的消息气泡下方会出现「编辑 / 删除 / 复制」三个按钮。
+### 装好之后
 
+DSH 启动日志里会出现 `message-rewind` 且状态为 active；刷新页面，你自己消息的气泡下方就会多出「编辑 / 删除 / 复制」三个按钮。
 
 ## 使用
 
-| 操作 | 效果 |
+1. 点铅笔 → 弹出编辑框，改完点「保存并重发」。
+2. 点垃圾桶 → 确认后删除这条消息及其后的全部对话。
+3. 如果那一轮记录到了文件改动，弹窗里会列出具体文件，并给你两个选项：
+   - **只回滚消息**：文件保持现状。
+   - **同时回滚消息和文件**：文件恢复成这条消息之前的内容。
+
+无论选哪个，弹窗里都会明确告诉你这次操作会丢掉哪些内容、以及文件回滚会不会被拒绝。
+
+## 文件回滚：什么能回、什么回不了
+
+**能回**：文本文件的新建、修改、删除——包括同一轮里「先新建再删掉」这类组合。
+
+**回不了时会直接报错，不会静默跳过**：
+
+| 情况 | 结果 |
 | --- | --- |
-| 点铅笔 | 弹出编辑框，改完点「保存并重发」 |
-| 点垃圾桶 | 确认后删除该消息及其后所有对话 |
-| 弹窗里选「同时回滚消息和文件」 | 把那一轮改动过的文件恢复到这条消息之前的内容 |
+| 二进制文件 | 无法回滚（只记录了文本 diff） |
+| 工作区不在 Git 仓库内，且文件是被 shell 命令改的 | 无法记录，因而无法回滚；在该目录 `git init` 后可完整记录 |
+| 会话重启或释放后，早先的快照已过期 | 提示「部分改动快照已不可用」，此时只能只回滚消息 |
+| 文件在记录之后又被你（或别的工具）改过 | 回滚会被**拒绝**，不会覆盖掉你后来的改动 |
+| 这个会话没有工作区 | 只能只回滚消息 |
 
-## 设计说明：为什么每次回滚都会换一个会话
+## 常见问题
 
-这是 DSH 的存储模型决定的，不是实现偷懒：
+**Q：回滚之后，侧边栏是不是会多出一条对话？**
+不会，始终只有一条同名对话。但底层会话 ID 会变：DSH 的会话日志是只追加的，没有「删掉中间一段」的接口，插件只能 fork 出一个截断后的分支，再把原会话移出侧边栏并删除其日志目录。所以如果你在别处引用过这个会话 ID，需要重新取一次。
 
-- 会话日志（`session.v4.jsonl.zstd`）是**只追加**的，`sessionPersistence` 只提供 `create / open / flush / stat / list`，`truncate` 仅用于崩溃后修复残尾（按字节）。
-- 日志格式里唯一能「少掉一段历史」的表达是 `surfaceOp: { op: 'replace', start, end }`，但携带该 op 的事件本身会被渲染 —— 只能「替换成另一条消息」，不能「替换成空」。
-- 因此能截断历史的原语只有 `sessionController.fork({ atSeq })`。
+**Q：原会话的记录还能找回吗？**
+正常情况下会被删除。只有当日志目录被占用删不掉时，原会话会保留在归档里；插件会在结果里告诉你是哪种情况。
 
-所以插件的做法是：fork 出截断后的分支 → 打开它 → 把原会话归档（或按设置彻底删除其日志目录），让侧边栏始终只有一条同名对话。代价是底层 SessionId 会变；原记录要么留在归档里可恢复，要么被删掉。
+**Q：为什么带附件的消息不能编辑？**
+附件是作为消息内容的一部分存下来的，编辑只支持纯文本消息。带附件的消息可以删除。
 
-## 已知限制
+**Q：点按钮提示「当前有未结束的轮次」？**
+先停止正在运行的任务再操作。另外，如果有排队中的消息，它们会随被删除的记录一起作废——弹窗里会提示。
 
-- **文件回滚依赖 recorder 快照**，以下情况回不来（都会明确报错，不会静默跳过）：
-  - 二进制文件（`workspaceChanges.diff()` 只提供文本 hunk）；
-  - 工作区**不在 Git 仓库内**时，只记录 DSH 自己的文件工具（write/edit）动过的文件，shell 命令删除/修改的文件无法记录 —— 在该目录 `git init` 后可完整记录；
-  - 会话重启或释放后 recorder 的内存记录已失效（弹窗提示「部分文件改动快照已不可用」）。
-- 文件在记录之后又被外部修改过时，回滚会**拒绝**而不是覆盖。
-- 带附件的消息只能删除、不能编辑。
-- 有未结束的轮次、或还有排队中的消息时，操作会被拒绝/提示。
+**Q：看不到按钮？**
+确认插件已在「设置 → 插件」里启用、并且刷新过一次页面；另外只有你自己发的消息才有这两个按钮。
 
-## 实现要点
+## 卸载
 
-- **通信不走自定义 Typert Remote**：第三方插件声明自定义命名空间不会自动生成远端绑定，客户端会一直 `pending`，把 web boot 拖死。
-- **也不走 `connection.rpc.handle()`**：Cordis 的服务代理只在**方法调用**时把 `this.ctx` 绑到调用方上下文，而 `connection.rpc` 是 getter，闭包里捕获的是 connection 插件自己的 ctx —— 它没有 `inject: webServer`，注册时会抛 `cannot get property "webServer" without inject`。
-- 最终做法：`ctx.webServer.register({ kind: 'prefix', path: '/message-rewind' })` 自建路由，手写 `client-request` / `server-response` 信封，鉴权复用 `ctx.connection.admit(request)`；客户端用官方的 `ctx.connection.rpc.call(channel, endpoint, payload)` 调用，两端信封天然对齐。
-- UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`），并复用 `@deepseek-ai/dsh-client-ui-primitives` 的图标与 Tooltip，气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，保证视觉一致。
+从 profile 的 `package.json` 里删掉 `dsh-message-rewind` 依赖，并删掉 `cordis.patch.yml` 里对应的 `insert` 段，`pnpm install` 后重启 DSH。
 
-## 目录结构
+## 反馈
 
-```
-index.js            Host 端：路由、鉴权、inspect/execute/purge、会话 fork 与清理
-rewind.js           纯函数：切点计算、反向应用 diff、重建 diff 某一侧
-files.js            文件回滚：计划（只读校验）→ 落盘 → 失败自动撤销
-client.js           浏览器端：消息气泡actions、确认/编辑弹窗
-locale/{zh,en}.json 插件显示名与描述
-cordis.patch.yml    bundle patch
-*.test.js           自检（node 直接跑，无测试框架依赖）
-```
+遇到问题或想加功能，欢迎提 [Issue](https://github.com/xCube007/dsh-message-rewind/issues)。
 
-## 开发与自检
+## 开发
 
-无外部依赖，Node 直接运行：
-
-```bash
-node rewind.test.js   # 切点 / diff 逆向数学
-node files.test.js      # 文件回滚：新建、删除、修改、无结尾换行、冲突拒绝、跨轮回卷、undo
-node client.test.js     # 客户端：用 stub React 跑完整交互（渲染按钮 → 编辑 → inspect → execute → purge）
-```
-
-改了 `index.js` 后在「设置 → 插件」里把插件关掉再打开即可热重载；改了 `client.js` 后客户端会通过 `/plugins/events` 收到 bundle 变更并重新 import，必要时刷新一次页面。
-
-## 发布到 npm（维护者备忘）
-
-```bash
-npm login                     # 浏览器授权一次
-npm publish                   # publishConfig.access=public 已固化，scoped 包免加 --access
-```
-
-发新版：
-
-```bash
-npm version patch             # 或 minor / major，自动改版本并打 tag
-git push --follow-tags
-npm publish
-```
-
-两个必须遵守的约束：
-
-1. **`package.json` 的 `name` 必须与 `client.js` 里 `window.__ModuleLoader__.load({ id })` 完全一致** —— 宿主按包名把客户端 bundle 挂进 boot roster，不一致会导致该 entry 永远 pending、web boot 失败。
-2. scoped 包默认私有，必须 `access: public`（已写进 `publishConfig`，不要删）。
-
-发布前用 `npm pack --dry-run` 确认 tarball 只含运行所需文件。
+想改代码或自己发版，看 [CONTRIBUTING.md](https://github.com/xCube007/dsh-message-rewind/blob/main/CONTRIBUTING.md)。
 
 ## License
 
