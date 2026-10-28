@@ -1,5 +1,5 @@
 {
-  "name": "@cube007/dsh-message-rollback",
+  "name": "dsh-message-rewind",
   "version": "1.0.0",
   "description": "DeepSeek Harness plugin: edit sent messages and roll back following turns, optionally restoring recorded file changes.",
   "license": "MIT",
@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/xCube007/dsh-message-rollback/issues"
   },
-  "keywords": ["deepseek", "deepseek-harness", "dsh", "dsh-plugin", "message", "rollback", "edit"],
+  "keywords": ["deepseek", "deepseek-harness", "dsh", "dsh-plugin", "message", "rewind", "rollback", "edit"],
   "type": "module",
   "exports": {
     ".": "./index.js",
