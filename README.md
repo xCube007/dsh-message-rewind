@@ -16,18 +16,16 @@
 
 ## 安装
 
-本插件是「profile bundle」，不走 npm 发布，直接从源码安装：
+### 从 npm 安装（推荐）
 
-```bash
-git clone https://github.com/xCube007/dsh-message-rollback.git D:/Code/dsh-message-rollback
-```
+包名 `@xcube007/dsh-message-rollback`（[npm](https://www.npmjs.com/package/@xcube007/dsh-message-rollback)）。
 
-1. 在 profile 的 `package.json` 里加一个本地依赖（`~/.dsh/profiles/<profile>/package.json`）：
+1. 在 profile 的 `package.json` 里加依赖（`~/.dsh/profiles/<profile>/package.json`）：
 
    ```json
    {
      "dependencies": {
-       "@local/dsh-message-rollback": "link:D:/Code/dsh-message-rollback"
+       "@xcube007/dsh-message-rollback": "^1.0.0"
      }
    }
    ```
@@ -37,12 +35,25 @@ git clone https://github.com/xCube007/dsh-message-rollback.git D:/Code/dsh-messa
    ```yaml
    - insert:
        - id: message-rollback
-         name: '@local/dsh-message-rollback'
+         name: '@xcube007/dsh-message-rollback'
    ```
 
 3. 在 profile 目录执行 `pnpm install`，然后重启 DSH（或在「设置 → 插件」里启用）。
 
-装好后 `dsh` 启动日志里应出现 `message-rollback` 这一行且状态为 active；页面刷新后，自己发的消息气泡下方会出现「编辑 / 删除 / 复制」三个按钮。
+### 从源码安装（开发/魔改用）
+
+```bash
+git clone https://github.com/xCube007/dsh-message-rollback.git D:/Code/dsh-message-rollback
+```
+
+把上面第 1 步的依赖换成链接形式，其余步骤相同：
+
+```json
+"@xcube007/dsh-message-rollback": "link:D:/Code/dsh-message-rollback"
+```
+
+装好后 `dsh` 启动日志里应出现 `message-rollback` 这一行且状态为 active；刷新页面后，自己发的消息气泡下方会出现「编辑 / 删除 / 复制」三个按钮。
+
 
 ## 使用
 
@@ -101,7 +112,29 @@ node files.test.js      # 文件回滚：新建、删除、修改、无结尾换
 node client.test.js     # 客户端：用 stub React 跑完整交互（渲染按钮 → 编辑 → inspect → execute → purge）
 ```
 
-改了 `index.js` 后在「设置 → 插件」里把插件关掉再打开即可热重载；改了 `client.js` 需要刷新页面。
+改了 `index.js` 后在「设置 → 插件」里把插件关掉再打开即可热重载；改了 `client.js` 后客户端会通过 `/plugins/events` 收到 bundle 变更并重新 import，必要时刷新一次页面。
+
+## 发布到 npm（维护者备忘）
+
+```bash
+npm login                     # 浏览器授权一次
+npm publish                   # publishConfig.access=public 已固化，scoped 包免加 --access
+```
+
+发新版：
+
+```bash
+npm version patch             # 或 minor / major，自动改版本并打 tag
+git push --follow-tags
+npm publish
+```
+
+两个必须遵守的约束：
+
+1. **`package.json` 的 `name` 必须与 `client.js` 里 `window.__ModuleLoader__.load({ id })` 完全一致** —— 宿主按包名把客户端 bundle 挂进 boot roster，不一致会导致该 entry 永远 pending、web boot 失败。
+2. scoped 包默认私有，必须 `access: public`（已写进 `publishConfig`，不要删）。
+
+发布前用 `npm pack --dry-run` 确认 tarball 只含运行所需文件。
 
 ## License
 

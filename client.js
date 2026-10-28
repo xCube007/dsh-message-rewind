@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: '@local/dsh-message-rollback',
+  id: '@xcube007/dsh-message-rollback',
   factory(require) {
     const React = require('react');
     const primitives = require('@deepseek-ai/dsh-client-ui-primitives');
@@ -107,7 +107,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      name: '@local/dsh-message-rollback',
+      name: '@xcube007/dsh-message-rollback',
       inject: ['slots', 'uiWorkspace', 'locale', 'connection'],
       apply(ctx) {
         try {
@@ -122,7 +122,7 @@ window.__ModuleLoader__.load({
       {
         ctx.effect(() => {
           const style = document.createElement('style');
-          style.dataset.plugin = '@local/dsh-message-rollback';
+          style.dataset.plugin = '@xcube007/dsh-message-rollback';
           style.dataset.pluginCss = `${NS}.module.css`;
           style.textContent = css;
           document.head.appendChild(style);
