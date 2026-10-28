@@ -105,13 +105,13 @@ const originalError = globalThis.console.error;
 globalThis.console.error = (...args) => { throw args[0]; };
 new Function('window', source)(globalThis.window);
 const definition = globalThis.__definition;
-assert.equal(definition.id, '@xcube007/dsh-message-rollback');
+assert.equal(definition.id, '@cube007/dsh-message-rollback');
 const plugin = definition.factory((id) => {
   if (id === 'react') return react;
   if (id === '@deepseek-ai/dsh-client-ui-primitives') return primitives;
   throw new Error(`unexpected require: ${id}`);
 });
-assert.equal(plugin.name, '@xcube007/dsh-message-rollback');
+assert.equal(plugin.name, '@cube007/dsh-message-rollback');
 assert.deepEqual(plugin.inject, ['slots', 'uiWorkspace', 'locale', 'connection']);
 plugin.apply(ctx);
 globalThis.console.error = originalError;

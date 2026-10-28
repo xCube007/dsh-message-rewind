@@ -18,14 +18,14 @@
 
 ### 从 npm 安装（推荐）
 
-包名 `@xcube007/dsh-message-rollback`（[npm](https://www.npmjs.com/package/@xcube007/dsh-message-rollback)）。
+包名 `@cube007/dsh-message-rollback`（[npm](https://www.npmjs.com/package/@cube007/dsh-message-rollback)）。
 
 1. 在 profile 的 `package.json` 里加依赖（`~/.dsh/profiles/<profile>/package.json`）：
 
    ```json
    {
      "dependencies": {
-       "@xcube007/dsh-message-rollback": "^1.0.0"
+       "@cube007/dsh-message-rollback": "^1.0.0"
      }
    }
    ```
@@ -35,7 +35,7 @@
    ```yaml
    - insert:
        - id: message-rollback
-         name: '@xcube007/dsh-message-rollback'
+         name: '@cube007/dsh-message-rollback'
    ```
 
 3. 在 profile 目录执行 `pnpm install`，然后重启 DSH（或在「设置 → 插件」里启用）。
@@ -49,7 +49,7 @@ git clone https://github.com/xCube007/dsh-message-rollback.git D:/Code/dsh-messa
 把上面第 1 步的依赖换成链接形式，其余步骤相同：
 
 ```json
-"@xcube007/dsh-message-rollback": "link:D:/Code/dsh-message-rollback"
+"@cube007/dsh-message-rollback": "link:D:/Code/dsh-message-rollback"
 ```
 
 装好后 `dsh` 启动日志里应出现 `message-rollback` 这一行且状态为 active；刷新页面后，自己发的消息气泡下方会出现「编辑 / 删除 / 复制」三个按钮。

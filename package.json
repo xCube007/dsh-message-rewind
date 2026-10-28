@@ -1,5 +1,5 @@
 {
-  "name": "@xcube007/dsh-message-rollback",
+  "name": "@cube007/dsh-message-rollback",
   "version": "1.0.0",
   "description": "DeepSeek Harness plugin: edit sent messages and roll back following turns, optionally restoring recorded file changes.",
   "license": "MIT",
