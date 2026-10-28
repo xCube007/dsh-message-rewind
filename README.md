@@ -1,5 +1,7 @@
 # dsh-message-rewind
 
+**简体中文** | [English](README.en.md)
+
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的消息气泡加两个按钮：**编辑**和**删除**。
 
 - 发错字了？改一下，直接从改后的内容重新开始，不用重开对话。

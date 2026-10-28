@@ -28,6 +28,7 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
+    "README.en.md",
     "*.test.js"
   ],
   "engines": {
