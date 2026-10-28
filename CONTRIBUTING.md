@@ -51,9 +51,10 @@ cordis.patch.yml    bundle patch
 - **通信不走自定义 Typert Remote**：第三方插件声明自定义命名空间不会自动生成远端绑定，客户端会一直 `pending`，把 web boot 拖死。
 - **也不走 `connection.rpc.handle()`**：Cordis 的服务代理只在**方法调用**时把 `this.ctx` 绑到调用方上下文，而 `connection.rpc` 是 getter，闭包里捕获的是 connection 插件自己的 ctx —— 它没有 `inject: webServer`，注册时会抛 `cannot get property "webServer" without inject`。
 - 最终做法：`ctx.webServer.register({ kind: 'prefix', path: '/message-rewind' })` 自建路由，手写 `client-request` / `server-response` 信封，鉴权复用 `ctx.connection.admit(request)`；客户端用官方的 `ctx.connection.rpc.call(channel, endpoint, payload)` 调用，两端信封天然对齐。
-- **purge 的删除目标必须自己证明安全**：`sessionId` 先按 `session-<uuid>` 形状校验，再用 `realpath` 把命中目录限定在 sessions root 内（只认 `root/<id>` 与 `root/<slug>/<id>` 两层），绝不把拼接结果直接交给 `fs.rm`。
+- **purge 的删除目标必须自己证明安全**：`sessionId` 先按 `session-<uuid>` 形状校验，再用 `realpath` 把命中目录限定在 sessions root 内（只认 `root/<id>` 与 `root/<slug>/<id>` 两层），绝不把拼接结果直接交给 `fs.rm`。归档失败时直接放弃删除，避免留下“侧边栏里还在、日志已没了”的会话。
 - Host 侧的失败都带 `rewindCode`，客户端按 code 查 zh/en 字典，拿不到词条才回退到 Host 的原文。
-- UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`），并复用 `@deepseek-ai/dsh-client-ui-primitives` 的图标与 Tooltip，气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，保证视觉一致。
+- UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`）：气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，图标/剪切板兜底是插件自己的 `dmr-` 前缀实现，不再 require `@deepseek-ai/dsh-client-ui-primitives`（官方 practices 明确不要依赖 Client 包）。
+- 对话弹窗只允许在 `loading` 阶段取消；inspect/execute 都带 30s 超时，过期的响应按 token 丢弃，不会把已关闭的弹窗重新拉起来。
 
 ## 发布到 npm
 
@@ -73,13 +74,15 @@ npm publish
 打 GitHub Release（也可以用 `gh`）：
 
 ```bash
-git tag -a v1.0.0 -m "dsh-message-rewind v1.0.0" && git push origin v1.0.0
-gh release create v1.0.0 --title v1.0.0 --notes-file notes.md
+git tag -a v1.1.0 -m "dsh-message-rewind v1.1.0" && git push origin v1.1.0
+gh release create v1.1.0 --title v1.1.0 --notes-file notes.md
 ```
+
+注意：`npm version patch` 已经会创建 tag，不要再手动 `git tag` 同名 tag（会报 already exists）；用 `npm version patch --no-git-tag-version` 则需要自己补 `git tag`。
 
 两个必须遵守的约束：
 
 1. **`package.json` 的 `name` 必须与 `client.js` 里 `window.__ModuleLoader__.load({ id })` 完全一致** —— 宿主按包名把客户端 bundle 挂进 boot roster，不一致会导致该 entry 永远 pending、web boot 失败。
-2. scoped 包默认私有，必须 `access: public`（已写进 `publishConfig`，不要删）。
+2. 当前发布的是非 scoped 的 `dsh-message-rewind`；`access: public` 对它是 no-op，保留是为了以后改回 scoped 包时不出错。
 
-发布前用 `npm pack --dry-run` 确认 tarball 只含运行所需文件。
+发布前 `npm test` 和 `npm pack --dry-run` 都必须过（`prepublishOnly` 已自动跑测试；CI 在 `.github/workflows/test.yml` 里跑 Node 20/22/24 × Linux/Windows）。

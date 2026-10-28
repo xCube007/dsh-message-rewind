@@ -27,12 +27,14 @@
 
 ### 从 npm 安装（推荐）
 
+> 1.1.0 尚未发布到 npm；如果 `npm view dsh-message-rewind version` 返回 404，请先用下面的源码安装。
+
 1. 在 profile 的 `package.json`（`~/.dsh/profiles/<profile>/package.json`）里加依赖：
 
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.0.0"
+       "dsh-message-rewind": "^1.1.0"
      }
    }
    ```

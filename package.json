@@ -1,6 +1,6 @@
 {
   "name": "dsh-message-rewind",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "DeepSeek Harness plugin: edit sent messages and roll back following turns, optionally restoring recorded file changes.",
   "license": "MIT",
   "author": "xCube007",
@@ -27,13 +27,15 @@
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",
-    "icon.svg"
+    "icon.svg",
+    "*.test.js"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "test": "node rewind.test.js && node files.test.js && node index.test.js && node client.test.js"
+    "test": "node rewind.test.js && node files.test.js && node index.test.js && node client.test.js",
+    "prepublishOnly": "npm test"
   },
   "publishConfig": {
     "access": "public"

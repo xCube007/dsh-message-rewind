@@ -13,7 +13,7 @@ const SESSIONS_ROOT = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'ses
 /** The harness mints `session-<uuid>`; refuse anything that could address a path. */
 const SESSION_ID = /^session-[0-9a-zA-Z]+(?:-[0-9a-zA-Z]+)*$/;
 
-export const inject = ['sessionController', 'workspaceChanges', 'sessions', 'workspaceController', 'connection', 'webServer'];
+export const inject = ['sessionController', 'workspaceChanges', 'workspaceController', 'connection', 'webServer'];
 
 const text = (error) => (error instanceof Error ? error.message : String(error));
 
@@ -231,24 +231,41 @@ export function apply(ctx) {
   /**
    * Remove a rolled-back source session for good. The harness keeps session logs
    * append-only and offers no delete API, so this retires the artifact instead:
-   * archive it out of the sidebar, wait for its writer to release, delete the
-   * directory, and report whether the bytes are gone.
+   * archive it out of the sidebar, delete its directory, and report whether the
+   * bytes are gone.
+   *
+   * The archive only cancels the running turn — the Agent stays in the session
+   * store for this Host's lifetime — so waiting for `sessions.get()` to clear
+   * would never finish. Deletion is attempted directly and its outcome is
+   * reported, with liveness used only to explain a failure.
    */
   async function purge(sessionId) {
-    await ctx.workspaceController.archiveSession({ sessionId, stopActivity: true }).catch(() => {});
-    for (let attempt = 0; attempt < 40 && ctx.sessions.get(sessionId) !== undefined; attempt += 1) await delay(100);
+    try {
+      await ctx.workspaceController.archiveSession({ sessionId, stopActivity: true });
+    } catch (error) {
+      // Without the archive the session would stay visible after its log is gone.
+      return { removed: false, archivedOnly: false, message: `会话归档失败，未删除任何内容：${text(error)}` };
+    }
     const directory = await sessionDirectory(SESSIONS_ROOT, sessionId);
     if (directory === undefined) return { removed: false, archivedOnly: false, message: '未找到会话日志目录，未删除任何内容。' };
+    const live = ctx.get('sessions')?.get(sessionId) !== undefined;
+    let failure;
     for (let attempt = 0; attempt < 6; attempt += 1) {
       try {
         await fsp.rm(directory, { recursive: true, force: true });
         return { removed: true, archivedOnly: false };
       } catch (error) {
-        if (attempt === 5) return { removed: false, archivedOnly: true, message: text(error) };
+        failure = error;
         await delay(250);
       }
     }
-    return { removed: false, archivedOnly: true };
+    return {
+      removed: false,
+      archivedOnly: true,
+      message: live
+        ? `会话仍在本进程中运行，日志目录无法删除，已移出侧边栏：${text(failure)}`
+        : `日志目录无法删除，已移出侧边栏：${text(failure)}`,
+    };
   }
 
   async function dispatch(endpoint, payload) {

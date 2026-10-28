@@ -2,14 +2,14 @@ window.__ModuleLoader__.load({
   id: 'dsh-message-rewind',
   factory(require) {
     const React = require('react');
-    const primitives = require('@deepseek-ai/dsh-client-ui-primitives');
     const h = React.createElement;
     const NS = 'message-rewind';
     const CHANNEL = '/message-rewind';
 
     const zh = {
       edit: '编辑并重发', remove: '删除这条消息及其后的对话', copy: '复制', copied: '已复制',
-      cancel: '取消', close: '关闭', loading: '正在检查文件改动…', save: '保存并重发',
+      'clock.md': '{m}月{d}日', 'clock.ymd': '{y}年{m}月{d}日',
+      cancel: '取消', close: '关闭', loading: '正在检查文件改动…', save: '保存并重发', body: '消息内容',
       editTitle: '编辑并重新发送', deleteTitle: '删除这条消息？',
       editHint: '将删除这条消息及其后的所有对话，并用修改后的内容重新发送。删除前的记录会被永久删除，无法恢复。',
       deleteHint: '将删除这条消息及其后的所有对话。删除前的记录会被永久删除，无法恢复。',
@@ -50,7 +50,8 @@ window.__ModuleLoader__.load({
     };
     const en = {
       edit: 'Edit and resend', remove: 'Delete this message and every following turn', copy: 'Copy', copied: 'Copied',
-      cancel: 'Cancel', close: 'Close', loading: 'Checking file changes…', save: 'Save and resend',
+      'clock.md': '{m}/{d}', 'clock.ymd': '{y}-{m}-{d}',
+      cancel: 'Cancel', close: 'Close', loading: 'Checking file changes…', save: 'Save and resend', body: 'Message text',
       editTitle: 'Edit and resend', deleteTitle: 'Delete this message?',
       editHint: 'Deletes this message and every following turn, then sends the edited text. The prior record is deleted for good and cannot be restored.',
       deleteHint: 'Deletes this message and every following turn. The prior record is deleted for good and cannot be restored.',
@@ -100,7 +101,7 @@ window.__ModuleLoader__.load({
       .dmr-action:disabled,.dmr-action[data-unavailable]{cursor:default;opacity:.4}
       .dmr-action:disabled:hover{background:0 0;color:var(--dsw-alias-label-tertiary)}
       .dmr-danger:not(:disabled):hover{color:var(--dsw-alias-state-error-primary)}
-      .dmr-mask{position:fixed;inset:0;z-index:1300;pointer-events:auto;background:var(--dsw-alias-bg-mask-drop);display:flex;align-items:center;justify-content:center;padding:24px}
+      .dmr-mask{position:fixed;inset:0;z-index:1000;pointer-events:auto;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsw-mask-blur);display:flex;align-items:center;justify-content:center;padding:24px}
       .dmr-modal{box-sizing:border-box;width:min(460px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-lg);box-shadow:var(--dsw-elevation-prominent);padding:20px}
       .dmr-title{font-size:16px;font-weight:600;line-height:24px;margin:0 0 10px}
       .dmr-hint{font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary);margin:0 0 12px}
@@ -119,6 +120,41 @@ window.__ModuleLoader__.load({
       @media (max-width:480px){.dmr-mask{padding:12px}.dmr-modal{padding:16px}.dmr-footer{flex-direction:column}.dmr-button{width:100%}}
     `;
 
+    const pad2 = (value) => String(value).padStart(2, '0');
+    /** Match the shipped `formatMessageClock`: 24h clock plus a localized date prefix. */
+    function formatMessageClock(time, t, now = Date.now()) {
+      const date = new Date(time);
+      const current = new Date(now);
+      const clock = `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+      if (date.getFullYear() === current.getFullYear() && date.getMonth() === current.getMonth() && date.getDate() === current.getDate()) return clock;
+      const params = { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() };
+      return `${date.getFullYear() === current.getFullYear() ? t('clock.md', params) : t('clock.ymd', params)} ${clock}`;
+    }
+
+    // Own controls instead of requiring a Harness Client package: primitives are
+    // not a plugin contract, and a missing export would blank the Chat row.
+    const iconProps = { viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, focusable: 'false' };
+    function IconEdit() { return h('svg', iconProps, h('path', { d: 'M10.4 2.8l2.8 2.8L5 13.8H2.2v-2.8l8.2-8.2z' }), h('path', { d: 'M9 4.2l2.8 2.8' })); }
+    function IconTrash() { return h('svg', iconProps, h('path', { d: 'M2.8 4.4h10.4' }), h('path', { d: 'M6.2 4.4V2.8h3.6v1.6' }), h('path', { d: 'M4.4 4.4l.6 8.8h6l.6-8.8' })); }
+    function IconCopy() { return h('svg', iconProps, h('rect', { x: '5.4', y: '5.4', width: '7.8', height: '7.8', rx: '1.4' }), h('path', { d: 'M3.4 10.6V4.2a1.4 1.4 0 0 1 1.4-1.4h6.4' })); }
+    function IconCheck() { return h('svg', iconProps, h('path', { d: 'M2.8 8.6l3.4 3.2 7-7.4' })); }
+
+    /** Copy text with the same clipboard fallback the host uses; never throws. */
+    async function writeClipboard(text) {
+      try {
+        if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true; }
+      } catch { /* fall through to execCommand */ }
+      const exec = typeof document.execCommand === 'function' ? document.execCommand.bind(document) : undefined;
+      if (exec === undefined) return false;
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(area);
+      area.select();
+      try { return exec('copy'); } catch { return false; } finally { area.remove(); }
+    }
+
     function contentParts(content) {
       const texts = [];
       const attachments = [];
@@ -132,26 +168,32 @@ window.__ModuleLoader__.load({
       return { text: texts.join(''), attachments, rest };
     }
 
-    function Modal({ title, busy, onClose, children }) {
+    function Modal({ title, locked, onClose, children }) {
       const ref = React.useRef(null);
+      const lockedRef = React.useRef(locked);
+      lockedRef.current = locked;
       React.useEffect(() => {
         const previous = document.activeElement;
         const target = ref.current?.querySelector('textarea, button');
         target?.focus();
-        if (target?.tagName === 'TEXTAREA') target.setSelectionRange(target.value.length, target.value.length);
+        if (target?.tagName === 'TEXTAREA' && typeof target.setSelectionRange === 'function') target.setSelectionRange(target.value.length, target.value.length);
         const onKey = (event) => {
-          if (event.key === 'Escape' && !busy) { event.preventDefault(); onClose(); return; }
+          if (event.key === 'Escape' && !lockedRef.current) { event.preventDefault(); onClose(); return; }
           if (event.key !== 'Tab') return;
           const items = [...(ref.current?.querySelectorAll('textarea, button:not(:disabled)') ?? [])];
+          if (items.length === 0) { event.preventDefault(); return; }
           const first = items[0];
           const last = items[items.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
         };
         document.addEventListener('keydown', onKey);
-        return () => { document.removeEventListener('keydown', onKey); previous?.focus?.(); };
-      }, [busy, onClose]);
-      return h('div', { className: 'dmr-mask', onMouseDown: (event) => { if (event.target === event.currentTarget && !busy) onClose(); } },
+        return () => {
+          document.removeEventListener('keydown', onKey);
+          if (previous?.isConnected !== false) previous?.focus?.();
+        };
+      }, [onClose]);
+      return h('div', { className: 'dmr-mask', onMouseDown: (event) => { if (event.target === event.currentTarget && !lockedRef.current) onClose(); } },
         h('section', { className: 'dmr-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, ref },
           h('h2', { className: 'dmr-title' }, title), children));
     }
@@ -183,7 +225,7 @@ window.__ModuleLoader__.load({
           const disposeEn = ctx.locale.register(NS, 'en', en);
           return () => { disposeZh(); disposeEn(); };
         }, `${NS}: dictionaries`);
-        const t = (key) => ctx.locale.bind(NS)(key);
+        const t = (key, params) => ctx.locale.bind(NS)(key, params);
 
         // Host failures carry a stable code; translate it and fall back to the
         // Host's own message only when the dictionary has no entry.
@@ -197,7 +239,8 @@ window.__ModuleLoader__.load({
           return error instanceof Error ? error.message : String(error);
         };
 
-        const remote = (endpoint, payload) => ctx.connection.rpc.call(CHANNEL, endpoint, payload).then((result) => {
+        const REQUEST_TIMEOUT = 30_000;
+        const remote = (endpoint, payload, signal) => ctx.connection.rpc.call(CHANNEL, endpoint, payload, signal).then((result) => {
           if (!result || result.ok !== true) {
             const error = new Error(result?.error?.message ?? t('failed'));
             if (typeof result?.error?.details?.rewindCode === 'string') error.rewindCode = result.error.details.rewindCode;
@@ -206,18 +249,38 @@ window.__ModuleLoader__.load({
           return result.value;
         });
 
+        // A dialog's own AbortController cancels its read; the timeout bounds a
+        // hung Host. Both are passed to the official RPC call.
+        const signalFor = (request) => {
+          const timeout = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(REQUEST_TIMEOUT) : undefined;
+          const abort = request?.abort?.signal;
+          if (abort === undefined) return timeout;
+          if (timeout === undefined) return abort;
+          return typeof AbortSignal.any === 'function' ? AbortSignal.any([abort, timeout]) : timeout;
+        };
+
         let current = null;
         const listeners = new Set();
         const publish = (next) => { current = next; for (const listener of listeners) listener(); };
         const subscribe = (listener) => { listeners.add(listener); return () => listeners.delete(listener); };
         const getSnapshot = () => current;
-        const close = () => { if (!current || current.busy) return; publish(null); };
-        const patch = (fields) => { if (current) publish({ ...current, ...fields }); };
+        // Loading is the only cancellable busy phase: an execute that already
+        // reached the Host cannot be safely abandoned from the Client.
+        const close = () => {
+          if (!current) return;
+          if (current.busy && current.phase !== 'loading') return;
+          current.abort?.abort();
+          publish(null);
+        };
+        // Every open mints a token; a late response patches only the dialog it
+        // belongs to, so a closed or replaced dialog is never resurrected.
+        const patchIf = (token, fields) => { if (current !== null && current.token === token) publish({ ...current, ...fields }); };
 
         async function execute(rewindFiles) {
           const request = current;
           if (!request || request.busy) return;
-          patch({ busy: true, error: null });
+          const token = request.token;
+          patchIf(token, { busy: true, error: null });
           try {
             const result = await remote('execute', {
               sessionId: request.sessionId,
@@ -225,7 +288,8 @@ window.__ModuleLoader__.load({
               action: request.kind,
               text: request.text,
               rewindFiles,
-            });
+            }, signalFor(request));
+            if (current?.token !== token) return;
             if (!result || typeof result.sessionId !== 'string') throw new Error(t('failed'));
             publish(null);
             // Navigate first so the source's client reference is released, then let
@@ -235,38 +299,44 @@ window.__ModuleLoader__.load({
             if (typeof source === 'string' && source !== result.sessionId) {
               Promise.resolve()
                 .then(() => new Promise((resolveDelay) => window.setTimeout(resolveDelay, 200)))
-                .then(() => remote('purge', { sessionId: source }))
-                .catch(() => {});
+                .then(() => remote('purge', { sessionId: source }, typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(REQUEST_TIMEOUT) : undefined))
+                .then((outcome) => {
+                  if (!outcome || outcome.removed !== true) console.warn('[message-rewind] source session kept in archive:', outcome?.message ?? 'log not deleted');
+                })
+                .catch((error) => { console.warn('[message-rewind] purge failed:', error instanceof Error ? error.message : String(error)); });
             }
           } catch (error) {
-            patch({ busy: false, error: errorText(error) });
+            patchIf(token, { busy: false, error: errorText(error) });
           }
         }
 
         async function check() {
           const request = current;
           if (!request) return;
-          patch({ phase: 'loading', busy: true, error: null });
+          const token = request.token;
+          patchIf(token, { phase: 'loading', busy: true, error: null });
           try {
-            const details = await remote('inspect', { sessionId: request.sessionId, seq: request.seq });
+            const details = await remote('inspect', { sessionId: request.sessionId, seq: request.seq }, signalFor(request));
+            if (current?.token !== token) return;
             const questions = details.files.length > 0 || details.incomplete;
             if (request.kind === 'edit' && !questions && !details.unfinished) {
-              patch({ busy: false, details });
+              patchIf(token, { busy: false, details });
               await execute(false);
               return;
             }
-            patch({ busy: false, details, phase: questions ? 'choice' : 'confirm' });
+            patchIf(token, { busy: false, details, phase: questions ? 'choice' : 'confirm' });
           } catch (error) {
-            patch({ busy: false, phase: request.kind === 'edit' ? 'edit' : 'confirm', error: errorText(error) });
+            if (current?.token !== token) return;
+            patchIf(token, { busy: false, phase: request.kind === 'edit' ? 'edit' : 'confirm', error: errorText(error) });
           }
         }
 
         function openEdit(sessionId, seq, text) {
-          publish({ kind: 'edit', sessionId, seq, text, phase: 'edit', busy: false, error: null, details: null });
+          publish({ token: {}, kind: 'edit', sessionId, seq, text, phase: 'edit', busy: false, error: null, details: null, abort: new AbortController() });
         }
 
         function openDelete(sessionId, seq) {
-          publish({ kind: 'delete', sessionId, seq, text: '', phase: 'loading', busy: true, error: null, details: null });
+          publish({ token: {}, kind: 'delete', sessionId, seq, text: '', phase: 'loading', busy: true, error: null, details: null, abort: new AbortController() });
           void check();
         }
 
@@ -282,7 +352,7 @@ window.__ModuleLoader__.load({
           const blocked = Boolean(details?.unfinished);
           return h(Modal, {
             title: editing ? t('editTitle') : t('deleteTitle'),
-            busy: dialog.busy,
+            locked: dialog.busy && phase !== 'loading',
             onClose: close,
           },
           phase === 'edit' && h(React.Fragment, null,
@@ -291,15 +361,18 @@ window.__ModuleLoader__.load({
               className: 'dmr-text',
               value: text,
               disabled: dialog.busy,
-              'aria-label': t('edit'),
+              'aria-label': t('body'),
               onChange: (event) => setText(event.target.value),
             })),
-          phase === 'loading' && h('p', { className: 'dmr-hint' }, t('loading')),
+          phase === 'loading' && h(React.Fragment, null,
+            h('p', { className: 'dmr-hint' }, t('loading')),
+            h('div', { className: 'dmr-footer' },
+              h('button', { className: 'dmr-button', type: 'button', onClick: close }, t('cancel')))),
           phase === 'confirm' && h('p', { className: 'dmr-hint' }, editing ? t('editHint') : t('deleteHint')),
           phase === 'choice' && h(React.Fragment, null,
             h('p', { className: 'dmr-hint' }, editing ? t('editHint') : t('deleteHint')),
             details.files.length > 0 && h('p', { className: 'dmr-hint' }, t('hasFiles')),
-            details.files.length > 0 && h('ul', { className: 'dmr-files' }, details.files.map((file) => h('li', { key: file }, file))),
+            details.files.length > 0 && h('ul', { className: 'dmr-files' }, details.files.map((file, index) => h('li', { key: `${index}:${file}` }, file))),
             h('p', { className: 'dmr-warning' }, details.incomplete ? t('incomplete') : t('fileWarning'))),
           blocked && h('p', { className: 'dmr-warning', role: 'status' }, t('running')),
           (details?.queued ?? 0) > 0 && h('p', { className: 'dmr-warning', role: 'status' }, t('queued')),
@@ -311,7 +384,7 @@ window.__ModuleLoader__.load({
               className: 'dmr-button dmr-primary',
               type: 'button',
               disabled: dialog.busy || text.trim() === '',
-              onClick: () => { patch({ text }); void check(); },
+              onClick: () => { patchIf(dialog.token, { text }); void check(); },
             }, t('save'))),
           (phase === 'confirm' || phase === 'choice') && h('div', { className: 'dmr-footer' },
             h('button', { className: 'dmr-button', type: 'button', onClick: close, disabled: dialog.busy }, t('cancel')),
@@ -334,6 +407,7 @@ window.__ModuleLoader__.load({
           const data = node.data;
           const running = typeof useSession === 'function' ? useSession((snapshot) => snapshot.running === true) : false;
           const [copied, setCopied] = React.useState(false);
+          const copyPending = React.useRef(false);
           React.useEffect(() => {
             if (!copied) return undefined;
             const timer = window.setTimeout(() => setCopied(false), 1000);
@@ -354,38 +428,44 @@ window.__ModuleLoader__.load({
           if (typeof renderFactorySlot !== 'function') return h('div', { className: 'dmr-row' }, h('span', null, parts.text));
           const attachmentBlocked = parts.attachments.length > 0 || parts.rest.length > 0;
           const copyText = () => {
-            const write = primitives.writeClipboard;
-            if (typeof write === 'function') { void write(parts.text).then((ok) => { if (ok) setCopied(true); }); return; }
-            navigator.clipboard.writeText(parts.text).then(() => setCopied(true), () => {});
+            if (copied || copyPending.current) return;
+            copyPending.current = true;
+            void writeClipboard(parts.text).then((ok) => {
+              copyPending.current = false;
+              if (ok) setCopied(true);
+            });
           };
-          const button = (name, label, onClick, options = {}) => h(primitives.Tooltip, { label, side: 'bottom' },
-            h('button', {
-              type: 'button',
-              className: `dmr-action${options.danger ? ' dmr-danger' : ''}`,
-              'aria-label': label,
-              'data-unavailable': options.disabled ? true : undefined,
-              disabled: options.disabled ? true : undefined,
-              onClick,
-            }, h(name, {})));
+          // The disabled reason rides `aria-label`/`title`; a disabled action is
+          // never reachable, so it cannot be mis-clicked while a turn runs.
+          const button = (Icon, label, onClick, options = {}) => h('button', {
+            type: 'button',
+            className: `dmr-action${options.danger ? ' dmr-danger' : ''}`,
+            'aria-label': label,
+            'aria-disabled': options.disabled ? true : undefined,
+            'data-unavailable': options.disabled ? true : undefined,
+            disabled: options.disabled ? true : undefined,
+            title: label,
+            onClick,
+          }, h(Icon, {}));
           return h('div', { className: 'dmr-row' },
             renderFactorySlot('conversation.chat.user.content', { content, loadImage, facts, interactive: true }),
             h('div', { className: 'dmr-actions' },
-              data.time === undefined ? null : h('span', { className: 'dmr-time' }, new Date(data.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
-              button(primitives.IconEditOutlineRegular,
+              data.time === undefined ? null : h('span', { className: 'dmr-time' }, formatMessageClock(data.time, t)),
+              button(IconEdit,
                 attachmentBlocked ? t('attachments') : running ? t('running') : t('edit'),
                 () => openEdit(sessionId, data.seq, parts.text),
                 { disabled: running || attachmentBlocked }),
-              button(primitives.IconTrashOutlineRegular,
+              button(IconTrash,
                 running ? t('running') : t('remove'),
                 () => openDelete(sessionId, data.seq),
                 { danger: true, disabled: running }),
-              button(copied ? primitives.IconCheckOutlineRegular : primitives.IconCopyOutlineRegular,
+              button(copied ? IconCheck : IconCopy,
                 copied ? t('copied') : t('copy'),
-                () => void copyText())));
+                () => copyText())));
         }
 
-        ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'user' }, UserActions));
-        ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'message-rewind.dialog' }, RewindDialog));
+        ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'user', locale: NS }, UserActions));
+        ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'message-rewind.dialog', locale: NS }, RewindDialog));
       }
     };
   },
