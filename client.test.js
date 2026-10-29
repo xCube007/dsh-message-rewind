@@ -67,6 +67,9 @@ globalThis.window = {
   __ModuleLoader__: { load: (definition) => { globalThis.__definition = definition; } },
 };
 Object.defineProperty(globalThis, 'navigator', { value: { clipboard: { writeText: () => Promise.resolve() } }, configurable: true });
+// The Host's `inspect` answer; the dialog tests below change it to exercise the
+// recorded-file and lost-snapshot branches.
+let inspectResult = { files: [], incomplete: false, unfinished: false };
 const ctx = {
   effect: (fn) => { fn(); return () => {}; },
   locale: {
@@ -81,7 +84,7 @@ const ctx = {
           ? { sessionId: 'child-1', restored: 0, sourceSessionId: payload.sessionId }
           : endpoint === 'purge'
             ? { removed: true, archivedOnly: false }
-            : { files: [], incomplete: false, unfinished: false };
+            : inspectResult;
         return Promise.resolve({ ok: true, value });
       },
     },
@@ -165,17 +168,60 @@ renderDialog();
 let dialog = renderDialog();
 assert.ok(dialog, 'edit opens the dialog');
 assert.equal(queryAll(dialog, (element) => element.type === 'textarea').at(0).props.value, 'hello');
-const footer = () => queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1);
-footer().children.at(-1).props.onClick();
 await new Promise((resolve) => setImmediate(resolve));
-assert.equal(calls.filter((call) => call[0] === 'rpc.call').at(0)[2], 'inspect');
+assert.equal(calls.filter((call) => call[0] === 'rpc.call').at(0)[2], 'inspect', 'opening edit inspects file changes');
 assert.deepEqual(calls.filter((call) => call[0] === 'rpc.call').at(0)[3], { sessionId: 'session-1', seq: 7 });
+const footer = () => queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1);
+footer().children.filter(Boolean).at(-1).props.onClick();
 await new Promise((resolve) => setImmediate(resolve));
 assert.ok(!renderDialog(), 'a clean edit closes the dialog after forking');
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession'), [['openSession', 'child-1']], 'the branch is opened');
 await new Promise((resolve) => setTimeout(resolve, 400));
 const purged = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'purge').at(-1);
 assert.deepEqual(purged[3], { sessionId: 'session-1' }, 'the untouched source is retired');
+
+// --- an edit that recorded file changes offers both rollback scopes ---------
+inspectResult = { files: ['test.txt', 'src/app.js'], incomplete: false, unfinished: false };
+editButton.props.onClick();
+await new Promise((resolve) => setImmediate(resolve));
+dialog = renderDialog();
+assert.deepEqual(
+  queryAll(dialog, (element) => element.type === 'li').map((item) => item.children.join('')),
+  ['test.txt', 'src/app.js'],
+  'the edit dialog lists the recorded files');
+const scopeInputs = queryAll(dialog, (element) => element.type === 'input');
+assert.equal(scopeInputs.length, 2, 'edit offers the shared scope control');
+assert.equal(scopeInputs[0].props.checked, true, 'messages-only is the default');
+assert.equal(scopeInputs[1].props.disabled, false, 'recorded files can be rolled back');
+scopeInputs[1].props.onChange();
+const scopeButtons = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
+assert.deepEqual(scopeButtons.map((button) => button.children.join('')), [
+  'message-rewind:cancel',
+  'message-rewind:save',
+], 'one primary action, with the scope chosen above it');
+scopeButtons.at(-1).props.onClick();
+await new Promise((resolve) => setImmediate(resolve));
+assert.deepEqual(
+  calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1)[3],
+  { sessionId: 'session-1', seq: 7, action: 'edit', text: 'hello', rewindFiles: true },
+  'the edited text is resent after the files roll back');
+assert.ok(!renderDialog(), 'the dialog closes after rolling back and resending');
+await new Promise((resolve) => setTimeout(resolve, 400));
+
+// --- a lost snapshot keeps the control, but file rollback is unavailable ----
+inspectResult = { files: [], incomplete: true, unfinished: false };
+editButton.props.onClick();
+await new Promise((resolve) => setImmediate(resolve));
+dialog = renderDialog();
+assert.equal(queryAll(dialog, (element) => element.props?.className === 'dmr-warning').at(0).children[0], 'message-rewind:incomplete');
+const staleInputs = queryAll(dialog, (element) => element.type === 'input');
+assert.equal(staleInputs.length, 2, 'the scope control stays visible');
+assert.equal(staleInputs[1].props.disabled, true, 'file rollback is unavailable');
+const staleButtons = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
+assert.equal(staleButtons.length, 2, 'cancel plus the messages-only action');
+staleButtons[0].props.onClick();
+assert.ok(!renderDialog(), 'cancel closes the stale-snapshot dialog');
+inspectResult = { files: [], incomplete: false, unfinished: false };
 
 // --- delete flow ------------------------------------------------------------
 deleteButton.props.onClick();
@@ -184,13 +230,35 @@ dialog = renderDialog();
 assert.ok(dialog, 'delete opens the dialog');
 const deleteFooter = queryAll(dialog, (element) => element.props?.className === 'dmr-footer').at(-1);
 const deleteButtons = deleteFooter.children.filter(Boolean);
-assert.equal(deleteButtons.length, 2, 'cancel plus messages-only');
+assert.equal(deleteButtons.length, 2, 'cancel plus delete');
 deleteButtons.at(-1).props.onClick();
 await new Promise((resolve) => setImmediate(resolve));
 const execute = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1);
 assert.deepEqual(execute[3], { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rewindFiles: false });
 await new Promise((resolve) => setImmediate(resolve));
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession').at(-1), ['openSession', 'child-1']);
+
+// --- delete asks the same question, so it renders the same control ----------
+inspectResult = { files: ['test.txt'], incomplete: false, unfinished: false };
+deleteButton.props.onClick();
+await new Promise((resolve) => setImmediate(resolve));
+dialog = renderDialog();
+const deleteScope = queryAll(dialog, (element) => element.type === 'input');
+assert.equal(deleteScope.length, 2, 'delete offers the same scope control');
+assert.equal(deleteScope[0].props.checked, true, 'messages-only is the default');
+deleteScope[1].props.onChange();
+const deleteActions = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
+assert.deepEqual(deleteActions.map((button) => button.children.join('')), [
+  'message-rewind:cancel',
+  'message-rewind:deleteConfirm',
+], 'the delete action follows the chosen scope');
+deleteActions.at(-1).props.onClick();
+await new Promise((resolve) => setImmediate(resolve));
+assert.deepEqual(
+  calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1)[3],
+  { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rewindFiles: true },
+  'the chosen file scope reaches the Host');
+inspectResult = { files: [], incomplete: false, unfinished: false };
 
 // let the delayed purge settle before the failure-path test swaps the RPC stub
 await new Promise((resolve) => setTimeout(resolve, 400));

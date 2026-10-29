@@ -9,7 +9,7 @@ window.__ModuleLoader__.load({
     const zh = {
       edit: '编辑并重发', remove: '删除这条消息及其后的对话', copy: '复制', copied: '已复制',
       'clock.md': '{m}月{d}日', 'clock.ymd': '{y}年{m}月{d}日',
-      cancel: '取消', close: '关闭', loading: '正在检查文件改动…', save: '保存并重发', body: '消息内容',
+      cancel: '取消', close: '关闭', loading: '正在检查文件改动…', save: '保存并重发', deleteConfirm: '删除', scope: '回滚范围', body: '消息内容',
       editTitle: '编辑并重新发送', deleteTitle: '删除这条消息？',
       editHint: '将删除这条消息及其后的所有对话，并用修改后的内容重新发送。删除前的记录会被永久删除，无法恢复。',
       deleteHint: '将删除这条消息及其后的所有对话。删除前的记录会被永久删除，无法恢复。',
@@ -51,7 +51,7 @@ window.__ModuleLoader__.load({
     const en = {
       edit: 'Edit and resend', remove: 'Delete this message and every following turn', copy: 'Copy', copied: 'Copied',
       'clock.md': '{m}/{d}', 'clock.ymd': '{y}-{m}-{d}',
-      cancel: 'Cancel', close: 'Close', loading: 'Checking file changes…', save: 'Save and resend', body: 'Message text',
+      cancel: 'Cancel', close: 'Close', loading: 'Checking file changes…', save: 'Save and resend', deleteConfirm: 'Delete', scope: 'Rollback scope', body: 'Message text',
       editTitle: 'Edit and resend', deleteTitle: 'Delete this message?',
       editHint: 'Deletes this message and every following turn, then sends the edited text. The prior record is deleted for good and cannot be restored.',
       deleteHint: 'Deletes this message and every following turn. The prior record is deleted for good and cannot be restored.',
@@ -115,6 +115,12 @@ window.__ModuleLoader__.load({
       .dmr-primary{background:var(--dsw-alias-button-primary-fill);border-color:transparent;color:var(--dsw-alias-label-primary-foreground);font-weight:500}
       .dmr-primary:not(:disabled):hover{background:var(--dsw-alias-button-primary-hover)}
       .dmr-files{margin:0 0 12px;padding:10px 12px;max-height:150px;overflow:auto;background:var(--dsw-alias-bg-layer-2);border-radius:var(--dsw-radius-md);font:12px/20px var(--ds-font-family-code);color:var(--dsw-alias-label-secondary);list-style:none;overflow-wrap:anywhere}
+      .dmr-choice{margin:0 0 12px;display:flex;flex-direction:column;gap:4px}
+      .dmr-choice-title{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);margin:0 0 2px}
+      .dmr-option{display:flex;align-items:center;gap:8px;font-size:13px;line-height:22px;color:var(--dsw-alias-label-primary);cursor:pointer}
+      .dmr-option input{margin:0;accent-color:var(--dsw-alias-button-primary-fill);cursor:pointer}
+      .dmr-option-disabled{color:var(--dsw-alias-label-tertiary);cursor:not-allowed}
+      .dmr-option-disabled input{cursor:not-allowed}
       .dmr-warning{color:var(--dsw-alias-state-warn-primary);font-size:12px;line-height:18px;margin:10px 0}
       .dmr-error{color:var(--dsw-alias-state-error-primary);font-size:12px;line-height:18px;margin:12px 0;overflow-wrap:anywhere}
       @media (max-width:480px){.dmr-mask{padding:12px}.dmr-modal{padding:16px}.dmr-footer{flex-direction:column}.dmr-button{width:100%}}
@@ -180,7 +186,7 @@ window.__ModuleLoader__.load({
         const onKey = (event) => {
           if (event.key === 'Escape' && !lockedRef.current) { event.preventDefault(); onClose(); return; }
           if (event.key !== 'Tab') return;
-          const items = [...(ref.current?.querySelectorAll('textarea, button:not(:disabled)') ?? [])];
+          const items = [...(ref.current?.querySelectorAll('textarea, input:not(:disabled), button:not(:disabled)') ?? [])];
           if (items.length === 0) { event.preventDefault(); return; }
           const first = items[0];
           const last = items[items.length - 1];
@@ -318,21 +324,33 @@ window.__ModuleLoader__.load({
           try {
             const details = await remote('inspect', { sessionId: request.sessionId, seq: request.seq }, signalFor(request));
             if (current?.token !== token) return;
-            const questions = details.files.length > 0 || details.incomplete;
-            if (request.kind === 'edit' && !questions && !details.unfinished) {
-              patchIf(token, { busy: false, details });
-              await execute(false);
-              return;
-            }
-            patchIf(token, { busy: false, details, phase: questions ? 'choice' : 'confirm' });
+            patchIf(token, { busy: false, details, phase: 'confirm' });
           } catch (error) {
             if (current?.token !== token) return;
-            patchIf(token, { busy: false, phase: request.kind === 'edit' ? 'edit' : 'confirm', error: errorText(error) });
+            patchIf(token, { busy: false, phase: 'confirm', error: errorText(error) });
+          }
+        }
+
+        // The edit dialog reads the recorded changes while the user types, so the
+        // rollback scope is visible before the first save. `checking` gates the
+        // actions without hiding the textarea or locking the dialog.
+        async function inspectEdit(request) {
+          const token = request.token;
+          patchIf(token, { checking: true, error: null });
+          try {
+            const details = await remote('inspect', { sessionId: request.sessionId, seq: request.seq }, signalFor(request));
+            if (current?.token !== token) return;
+            patchIf(token, { checking: false, details });
+          } catch (error) {
+            if (current?.token !== token) return;
+            patchIf(token, { checking: false, error: errorText(error) });
           }
         }
 
         function openEdit(sessionId, seq, text) {
-          publish({ token: {}, kind: 'edit', sessionId, seq, text, phase: 'edit', busy: false, error: null, details: null, abort: new AbortController() });
+          const dialog = { token: {}, kind: 'edit', sessionId, seq, text, phase: 'edit', busy: false, checking: true, error: null, details: null, abort: new AbortController() };
+          publish(dialog);
+          void inspectEdit(dialog);
         }
 
         function openDelete(sessionId, seq) {
@@ -349,7 +367,36 @@ window.__ModuleLoader__.load({
           const editing = dialog.kind === 'edit';
           const phase = dialog.phase;
           const details = dialog.details;
+          const files = details?.files ?? [];
           const blocked = Boolean(details?.unfinished);
+          const selected = dialog.withFiles === true;
+          const canRollback = details !== null && files.length > 0 && !details.incomplete;
+          // Both dialogs ask the same question — how far the rewind reaches — and
+          // differ only in the action that follows it, so the choice renders once.
+          const fileSection = details !== null && (files.length > 0 || details.incomplete) ? h(React.Fragment, null,
+            files.length > 0 && h('p', { className: 'dmr-hint' }, t('hasFiles')),
+            files.length > 0 && h('ul', { className: 'dmr-files' }, files.map((file, index) => h('li', { key: `${index}:${file}` }, file))),
+            h('div', { className: 'dmr-choice', role: 'radiogroup', 'aria-label': t('scope') },
+              h('p', { className: 'dmr-choice-title' }, t('scope')),
+              h('label', { className: 'dmr-option' },
+                h('input', {
+                  type: 'radio',
+                  name: 'dmr-rollback-scope',
+                  checked: !selected,
+                  onChange: () => patchIf(dialog.token, { withFiles: false }),
+                }),
+                t('messagesOnly')),
+              h('label', { className: canRollback ? 'dmr-option' : 'dmr-option dmr-option-disabled' },
+                h('input', {
+                  type: 'radio',
+                  name: 'dmr-rollback-scope',
+                  checked: selected,
+                  disabled: !canRollback,
+                  onChange: () => patchIf(dialog.token, { withFiles: true }),
+                }),
+                t('withFiles'))),
+            h('p', { className: 'dmr-warning' }, details.incomplete ? t('incomplete') : t('fileWarning'))) : null;
+          const cancelButton = h('button', { className: 'dmr-button', type: 'button', onClick: close, disabled: dialog.busy }, t('cancel'));
           return h(Modal, {
             title: editing ? t('editTitle') : t('deleteTitle'),
             locked: dialog.busy && phase !== 'loading',
@@ -363,44 +410,40 @@ window.__ModuleLoader__.load({
               disabled: dialog.busy,
               'aria-label': t('body'),
               onChange: (event) => setText(event.target.value),
-            })),
+            }),
+            dialog.checking && h('p', { className: 'dmr-hint' }, t('loading')),
+            fileSection),
           phase === 'loading' && h(React.Fragment, null,
             h('p', { className: 'dmr-hint' }, t('loading')),
             h('div', { className: 'dmr-footer' },
               h('button', { className: 'dmr-button', type: 'button', onClick: close }, t('cancel')))),
-          phase === 'confirm' && h('p', { className: 'dmr-hint' }, editing ? t('editHint') : t('deleteHint')),
-          phase === 'choice' && h(React.Fragment, null,
-            h('p', { className: 'dmr-hint' }, editing ? t('editHint') : t('deleteHint')),
-            details.files.length > 0 && h('p', { className: 'dmr-hint' }, t('hasFiles')),
-            details.files.length > 0 && h('ul', { className: 'dmr-files' }, details.files.map((file, index) => h('li', { key: `${index}:${file}` }, file))),
-            h('p', { className: 'dmr-warning' }, details.incomplete ? t('incomplete') : t('fileWarning'))),
+          phase === 'confirm' && h(React.Fragment, null,
+            h('p', { className: 'dmr-hint' }, t('deleteHint')),
+            fileSection),
           blocked && h('p', { className: 'dmr-warning', role: 'status' }, t('running')),
           (details?.queued ?? 0) > 0 && h('p', { className: 'dmr-warning', role: 'status' }, t('queued')),
           details?.git === false && h('p', { className: 'dmr-warning', role: 'status' }, t('noGit')),
           dialog.error && h('p', { className: 'dmr-error', role: 'alert' }, dialog.error),
           phase === 'edit' && h('div', { className: 'dmr-footer' },
-            h('button', { className: 'dmr-button', type: 'button', onClick: close, disabled: dialog.busy }, t('cancel')),
+            cancelButton,
             h('button', {
               className: 'dmr-button dmr-primary',
               type: 'button',
-              disabled: dialog.busy || text.trim() === '',
-              onClick: () => { patchIf(dialog.token, { text }); void check(); },
+              disabled: dialog.busy || dialog.checking || text.trim() === '' || blocked,
+              onClick: () => {
+                patchIf(dialog.token, { text });
+                if (details === null) { void inspectEdit(current); return; }
+                void execute(canRollback && selected);
+              },
             }, t('save'))),
-          (phase === 'confirm' || phase === 'choice') && h('div', { className: 'dmr-footer' },
-            h('button', { className: 'dmr-button', type: 'button', onClick: close, disabled: dialog.busy }, t('cancel')),
+          phase === 'confirm' && h('div', { className: 'dmr-footer' },
+            cancelButton,
             h('button', {
-              className: 'dmr-button',
+              className: 'dmr-button dmr-primary',
               type: 'button',
               disabled: dialog.busy || blocked,
-              onClick: () => void execute(false),
-            }, editing ? t('save') : t('messagesOnly')),
-            phase === 'choice' && h('button', {
-              className: 'dmr-button dmr-primary',
-              type: 'button',
-              disabled: dialog.busy || blocked || details.incomplete,
-              title: details.incomplete ? t('incomplete') : t('fileWarning'),
-              onClick: () => void execute(true),
-            }, t('withFiles'))));
+              onClick: () => void execute(canRollback && selected),
+            }, t('deleteConfirm'))));
         }
 
         function UserActions({ node, sessionId, renderFactorySlot, loadImage, useSession }) {

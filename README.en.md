@@ -27,14 +27,12 @@ Requires a DSH build that can load plugin bundles, and Node.js ≥ 20.
 
 ### From npm (recommended)
 
-> 1.1.0 is not on npm yet. If `npm view dsh-message-rewind version` returns 404, use the source install below for now.
-
 1. Add the dependency to your profile's `package.json` (`~/.dsh/profiles/<profile>/package.json`):
 
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.1.0"
+       "dsh-message-rewind": "^1.1.1"
      }
    }
    ```
@@ -68,10 +66,11 @@ The DSH startup log lists `message-rewind` as active. Refresh the page and your 
 ## Usage
 
 1. Click the pencil → the editor opens; change the text and click **Save and resend**.
-2. Click the trash icon → confirm to delete that message and every following turn.
-3. If that turn recorded file changes, the dialog lists the files and offers two choices:
-   - **Messages only** — leave files untouched.
-   - **Messages and files** — restore files to their content before that message.
+2. Click the trash icon → click **Delete** to remove that message and every following turn.
+3. The dialog reads the file changes recorded after that message as soon as it opens, and lists them; when files changed (or the snapshots expired) it also offers a **Rollback scope**:
+   - **Roll back messages only** (default) — leave files untouched;
+   - **Roll back messages and files** — restore files to their content before that message;
+   - pick the scope, then click **Save and resend** or **Delete**.
 
 Either way, the dialog tells you exactly what will be lost and whether the file rollback can be refused.
 
