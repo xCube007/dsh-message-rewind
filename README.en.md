@@ -21,6 +21,20 @@ Edit and delete your own messages in [DeepSeek Harness](https://github.com/deeps
 
 Only messages you sent have these buttons. The **Copy** button is still there, in the same position.
 
+## Screenshots
+
+Your own messages get **edit / delete / copy** buttons under the bubble:
+
+<img src="img/message-actions.png" alt="Edit, delete and copy buttons under a user message" width="760">
+
+The edit dialog lists the file changes recorded after that message as soon as it opens, and the **rollback scope** decides whether files are restored too:
+
+| Edit dialog | Delete confirmation |
+| :---: | :---: |
+| <img src="img/edit-dialog.png" alt="Edit dialog with the file list and rollback scope" width="340"> | <img src="img/delete-dialog.png" alt="Delete confirmation with the same rollback scope" width="340"> |
+
+Snapshot and Git-worktree limits are shown in the dialog itself, not after a failed operation.
+
 ## Install
 
 Requires a DSH build that can load plugin bundles, and Node.js ≥ 20.
