@@ -80,6 +80,13 @@ gh release create v1.1.0 --title v1.1.0 --notes-file notes.md
 
 注意：`npm version patch` 已经会创建 tag，不要再手动 `git tag` 同名 tag（会报 already exists）；用 `npm version patch --no-git-tag-version` 则需要自己补 `git tag`。
 
+### Release 资产
+
+每次发版请给该 Release 附两份相同的 tarball：带版本号的 `dsh-message-rewind-<version>.tgz`，以及**文件名不带版本号**的 `dsh-message-rewind.tgz`。
+
+插件列表（awesome-dsh-plugin）的 `tarball:` 指向
+`https://github.com/xCube007/dsh-message-rewind/releases/latest/download/dsh-message-rewind.tgz`：`latest/download/` 只在请求时解析 `latest`，文件名按字面取，所以资产名一旦带版本号，下一次发版后这个链接就会 404。
+
 两个必须遵守的约束：
 
 1. **`package.json` 的 `name` 必须与 `client.js` 里 `window.__ModuleLoader__.load({ id })` 完全一致** —— 宿主按包名把客户端 bundle 挂进 boot roster，不一致会导致该 entry 永远 pending、web boot 失败。
