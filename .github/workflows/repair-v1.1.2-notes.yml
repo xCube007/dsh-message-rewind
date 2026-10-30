@@ -15,6 +15,7 @@ jobs:
       - name: rewrite the v1.1.2 body from the annotated tag
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v1.1.2" --jq .object.sha)
           gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_sha" --jq .message > notes.md
