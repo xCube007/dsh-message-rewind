@@ -71,26 +71,29 @@ npm login                     # 浏览器授权一次
 npm publish                   # publishConfig.access=public 已固化
 ```
 
-发新版：
+发新版（GitHub Release 由推 tag 自动创建，见下）：
 
 ```bash
-npm version patch             # 或 minor / major，自动改版本并打 tag
+npm version patch --no-git-tag-version   # 只改 package.json 版本号
+npm test
+git add -A && git commit -m "chore: release 1.1.3"
+git tag -a v1.1.3 -m "## 改动……"          # annotated tag 的描述就是 Release notes
 git push --follow-tags
-npm publish
+npm publish                               # npm 解封后再发
 ```
 
-打 GitHub Release（也可以用 `gh`）：
+打 GitHub Release：推 tag 会触发 `.github/workflows/release.yml`，自动跑测试、打包两份 tarball，并用 annotated tag 的描述作为正文创建 Release。Actions 不可用时手动兜底：
 
 ```bash
-git tag -a v1.1.0 -m "dsh-message-rewind v1.1.0" && git push origin v1.1.0
-gh release create v1.1.0 --title v1.1.0 --notes-file notes.md
+gh release create v1.1.3 --title "dsh-message-rewind v1.1.3" --notes-from-tag \
+  dsh-message-rewind-1.1.3.tgz dsh-message-rewind.tgz
 ```
 
-注意：`npm version patch` 已经会创建 tag，不要再手动 `git tag` 同名 tag（会报 already exists）；用 `npm version patch --no-git-tag-version` 则需要自己补 `git tag`。
+注意：`npm version` 默认会自己建一个只有版本号的 tag，那样 Release notes 只有一行；所以用 `--no-git-tag-version` 再手动打 annotated tag。同名 tag 已存在时不要再 `git tag`（会报 already exists）。
 
 ### Release 资产
 
-每次发版请给该 Release 附两份相同的 tarball：带版本号的 `dsh-message-rewind-<version>.tgz`，以及**文件名不带版本号**的 `dsh-message-rewind.tgz`。
+每个 Release 必须附两份相同的 tarball（release workflow 已自动完成）：带版本号的 `dsh-message-rewind-<version>.tgz`，以及**文件名不带版本号**的 `dsh-message-rewind.tgz`。
 
 插件列表（awesome-dsh-plugin）的 `tarball:` 指向
 `https://github.com/xCube007/dsh-message-rewind/releases/latest/download/dsh-message-rewind.tgz`：`latest/download/` 只在请求时解析 `latest`，文件名按字面取，所以资产名一旦带版本号，下一次发版后这个链接就会 404。
