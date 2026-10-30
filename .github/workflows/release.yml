@@ -3,6 +3,11 @@ name: release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish or repair
+        required: true
 
 permissions:
   contents: write
@@ -10,6 +15,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,15 +26,18 @@ jobs:
       - run: npm test
       - name: pack both release tarballs
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${TAG#v}"
           npm pack
           cp "dsh-message-rewind-${version}.tgz" dsh-message-rewind.tgz
-      - name: create the GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: publish the GitHub release
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" \
-            --title "dsh-message-rewind $GITHUB_REF_NAME" \
-            --notes-from-tag \
-            "dsh-message-rewind-${version}.tgz" dsh-message-rewind.tgz
+          version="${TAG#v}"
+          tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)
+          gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_sha" --jq .message > release-notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file release-notes.md
+            gh release upload "$TAG" "dsh-message-rewind-${version}.tgz" dsh-message-rewind.tgz --clobber
+          else
+            gh release create "$TAG" --title "dsh-message-rewind $TAG" --notes-file release-notes.md \
+              "dsh-message-rewind-${version}.tgz" dsh-message-rewind.tgz
+          fi

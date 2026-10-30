@@ -1,0 +1,21 @@
+name: repair-v1.1.2-notes
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/repair-v1.1.2-notes.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: rewrite the v1.1.2 body from the annotated tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v1.1.2" --jq .object.sha)
+          gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_sha" --jq .message > notes.md
+          gh release edit v1.1.2 --notes-file notes.md

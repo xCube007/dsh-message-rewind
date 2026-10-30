@@ -82,7 +82,7 @@ git push --follow-tags
 npm publish                               # npm 解封后再发
 ```
 
-打 GitHub Release：推 tag 会触发 `.github/workflows/release.yml`，自动跑测试、打包两份 tarball，并用 annotated tag 的描述作为正文创建 Release。Actions 不可用时手动兜底：
+打 GitHub Release：推 tag 会触发 `.github/workflows/release.yml`，自动跑测试、打包两份 tarball，并从 annotated tag 对象读取描述作为正文创建 Release。Release 已存在时改为重写正文并用 `--clobber` 重传资产；因此已发布的 Release 要改 notes 或补资产时，编辑 annotated tag 后在 Actions 里手动运行一次该 workflow（`workflow_dispatch`，填 tag）即可。Actions 不可用时手动兜底：
 
 ```bash
 gh release create v1.1.3 --title "dsh-message-rewind v1.1.3" --notes-from-tag \
