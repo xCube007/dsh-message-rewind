@@ -37,7 +37,7 @@ Snapshot and Git-worktree limits are shown in the dialog itself, not after a fai
 
 ## Install
 
-Requires a DSH build that can load plugin bundles, and Node.js ≥ 20.
+Requires DSH 0.2.1-rc.3 or newer (0.2.x) and Node.js ≥ 20; verified on 0.2.1-rc.5. DSH validates `engines.dsh` at startup and refuses to load the plugin on an older host.
 
 ### From npm (recommended)
 

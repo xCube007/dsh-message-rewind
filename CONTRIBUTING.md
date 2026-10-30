@@ -16,13 +16,21 @@ git clone https://github.com/xCube007/dsh-message-rewind.git
 无外部依赖，Node 直接跑自检：
 
 ```bash
+node manifest.test.js # 包元数据：engines.dsh、manifestVersion、客户端 bundle id 与包名一致
 node rewind.test.js   # 切点 / diff 逆向数学
 node files.test.js    # 文件回滚：新建、删除、修改、无结尾换行、BOM、冲突拒绝、跨轮回卷、undo
 node index.test.js    # Host 端：会话目录定位与越权路径拒绝（purge 的前置保护）
 node client.test.js   # 客户端：用 stub React 跑主交互（渲染按钮 → 编辑 → inspect → execute → purge → 错误本地化）
 ```
 
-`npm test` 会依次跑这四个文件。
+`npm test` 会依次跑这五个文件。
+
+## DSH 版本兼容
+
+- `package.json` 的 `engines.dsh` 是宿主**加载前**的硬门槛（`@deepseek-ai/dsh-app-boot` 的 `evaluatePluginCompatibility`，语义是 `semver.satisfies(..., { includePrerelease: true })`）：范围不匹配时整个 bundle 被拒绝加载，不是只坏一个功能。
+- 当前声明 `>=0.2.1-rc.3 <0.3.0-0`：0.2.1-rc.3 上开发，0.2.1-rc.5 实测通过（Host 侧的 `/message-rewind` 路由正常注册；客户端用到的 `conversation.chat.node`、`conversation.chat.user.content`、`shell.overlay` 槽位与 `sessionId` / `useSession` / `renderFactorySlot` 标准 props 在 rc.5 的槽位契约里都存在）。`<0.3.0-0` 挡住 0.3 的预发布版本，避免没验证就放行。
+- 升级 DSH 并验证后，同步改这个范围、`README*` 的安装要求，以及 `manifest.test.js` 里的正则。
+- `client.js` 里 `window.__ModuleLoader__.load({ id })` 必须等于包名，否则该 client entry 永远 pending、web boot 失败；`manifest.test.js` 会拦住不一致。
 
 ## 目录结构
 

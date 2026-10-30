@@ -32,16 +32,18 @@
     "*.test.js"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.3 <0.3.0-0"
   },
   "scripts": {
-    "test": "node rewind.test.js && node files.test.js && node index.test.js && node client.test.js",
+    "test": "node manifest.test.js && node rewind.test.js && node files.test.js && node index.test.js && node client.test.js",
     "prepublishOnly": "npm test"
   },
   "publishConfig": {
     "access": "public"
   },
   "dsh": {
+    "manifestVersion": 1,
     "bundle": { "patch": "./cordis.patch.yml" },
     "client": { "platform": "web" }
   }
