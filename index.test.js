@@ -70,12 +70,15 @@ await check('a junction cannot escape the sessions root', async () => {
   try {
     assert.equal(await sessionDirectory(realRoot, linked), undefined);
   } finally {
-    await fsp.rm(linkedPath, { force: true }).catch(() => {});
+    // A junction is removed like a file, but only when `recursive` is set on
+    // Windows; a bare rm leaves the reparse point behind and the root cleanup
+    // below then fails with ENOTEMPTY.
+    await fsp.rm(linkedPath, { recursive: true, force: true }).catch(() => {});
     await fsp.rm(outsideParent, { recursive: true, force: true });
   }
 });
 
-await fsp.rm(realRoot, { recursive: true, force: true });
+await fsp.rm(realRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 
 // --- route surface ---------------------------------------------------------
 const routeCalls = [];
