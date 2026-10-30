@@ -48,7 +48,7 @@
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.1.1"
+       "dsh-message-rewind": "^1.1.2"
      }
    }
    ```

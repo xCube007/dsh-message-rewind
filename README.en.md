@@ -46,7 +46,7 @@ Requires DSH 0.2.1-rc.3 or newer (0.2.x) and Node.js ≥ 20; verified on 0.2.1-r
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.1.1"
+       "dsh-message-rewind": "^1.1.2"
      }
    }
    ```
