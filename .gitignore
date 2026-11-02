@@ -3,3 +3,5 @@ node_modules/
 *.tgz
 .tmp-*
 .DS_Store
+# 本地发布提示词（含本机 token 路径），不进仓库
+PUBLISHING.md
