@@ -27,13 +27,13 @@
 
 自己发出的消息，气泡下方会多出「编辑 / 删除 / 复制」三个按钮：
 
-<img src="img/message-actions.png" alt="消息气泡下方的编辑、删除、复制按钮" width="760">
+<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions.png" alt="消息气泡下方的编辑、删除、复制按钮" width="760">
 
 编辑弹窗打开时就会列出这条消息之后记录到的文件改动，并用「回滚范围」决定要不要连文件一起还原：
 
 | 编辑弹窗 | 删除确认 |
 | :---: | :---: |
-| <img src="img/edit-dialog.png" alt="编辑弹窗：文件改动列表和回滚范围" width="340"> | <img src="img/delete-dialog.png" alt="删除确认框：与编辑共用同一个回滚范围" width="340"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog.png" alt="编辑弹窗：文件改动列表和回滚范围" width="340"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog.png" alt="删除确认框：与编辑共用同一个回滚范围" width="340"> |
 
 快照失效、工作区不在 Git 仓库等限制也会直接标在弹窗里，不用等到操作失败才知道。
 
@@ -43,12 +43,24 @@
 
 ### 从 npm 安装（推荐）
 
+包已发布到 npm：[dsh-message-rewind](https://www.npmjs.com/package/dsh-message-rewind)，也在[插件市场](https://awesome-dsh-plugin.com/p/xCube007/dsh-message-rewind/)里。
+
+最省事的一条命令：
+
+```bash
+dsh plugin --profile web add dsh-message-rewind
+```
+
+也可以直接在 DSH 里装：**设置 → 插件 → 搜索 `dsh-message-rewind`**。
+
+习惯自己改配置的话，手动安装等价于下面三步：
+
 1. 在 profile 的 `package.json`（`~/.dsh/profiles/<profile>/package.json`）里加依赖：
 
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.1.2"
+       "dsh-message-rewind": "^1.1.3"
      }
    }
    ```

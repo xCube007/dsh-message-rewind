@@ -25,13 +25,13 @@ Only messages you sent have these buttons. The **Copy** button is still there, i
 
 Your own messages get **edit / delete / copy** buttons under the bubble:
 
-<img src="img/message-actions.png" alt="Edit, delete and copy buttons under a user message" width="760">
+<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions.png" alt="Edit, delete and copy buttons under a user message" width="760">
 
 The edit dialog lists the file changes recorded after that message as soon as it opens, and the **rollback scope** decides whether files are restored too:
 
 | Edit dialog | Delete confirmation |
 | :---: | :---: |
-| <img src="img/edit-dialog.png" alt="Edit dialog with the file list and rollback scope" width="340"> | <img src="img/delete-dialog.png" alt="Delete confirmation with the same rollback scope" width="340"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog.png" alt="Edit dialog with the file list and rollback scope" width="340"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog.png" alt="Delete confirmation with the same rollback scope" width="340"> |
 
 Snapshot and Git-worktree limits are shown in the dialog itself, not after a failed operation.
 
@@ -41,12 +41,24 @@ Requires DSH 0.2.1-rc.3 or newer (0.2.x) and Node.js ≥ 20; verified on 0.2.1-r
 
 ### From npm (recommended)
 
+Published on npm as [dsh-message-rewind](https://www.npmjs.com/package/dsh-message-rewind), and listed in the [plugin market](https://awesome-dsh-plugin.com/p/xCube007/dsh-message-rewind/).
+
+One command:
+
+```bash
+dsh plugin --profile web add dsh-message-rewind
+```
+
+Or install from inside DSH: **Settings → Plugins → search `dsh-message-rewind`**.
+
+If you prefer editing the profile yourself, the manual route is the same three steps:
+
 1. Add the dependency to your profile's `package.json` (`~/.dsh/profiles/<profile>/package.json`):
 
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.1.2"
+       "dsh-message-rewind": "^1.1.3"
      }
    }
    ```

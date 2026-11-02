@@ -66,20 +66,27 @@ cordis.patch.yml    bundle patch
 
 ## 发布到 npm
 
-```bash
-npm login                     # 浏览器授权一次
-npm publish                   # publishConfig.access=public 已固化
+npm 上当前是 `dsh-message-rewind@1.1.3`（2026-11-02 首发）。发布用 granular access token（Read and write + All packages + **Bypass 2FA**），token 存本机私有文件、不要进仓库；用临时 npmrc 传给 npm：
+
+```powershell
+$token = (Get-Content '<本机 token 文件>' -Raw).Trim()
+"//registry.npmjs.org/:_authToken=$token" | Set-Content "$env:TEMP\npm-publish.rc" -Encoding ascii
+npm whoami  --userconfig "$env:TEMP\npm-publish.rc"      # 必须返回 cube007
+npm publish --userconfig "$env:TEMP\npm-publish.rc"
+Remove-Item "$env:TEMP\npm-publish.rc" -Force
 ```
+
+⚠️ **staged publishing**：`npm publish` 可能返回 `PUT 202`，却照样打印 `+ pkg@version`、exit 0——这时版本只是 staged，registry 会先出现 `0.0.0-stage` 占位，真实版本 1–5 分钟后才写进 packument。**上线与否只看 registry**（`dist-tags` / `versions`），不看 CLI 输出。已 staged 时重试同一版本会得到 `409 Cannot publish over previously staged version`，而 `npm stage list` 通常为空（npm/cli#9889），只能再 bump 一个 patch 版本重发；被 staged 的版本号作废。`0.0.0-stage` 是 npm 的占位 stub，不要尝试 unpublish。
 
 发新版（GitHub Release 由推 tag 自动创建，见下）：
 
 ```bash
 npm version patch --no-git-tag-version   # 只改 package.json 版本号
 npm test
-git add -A && git commit -m "chore: release 1.1.3"
-git tag -a v1.1.3 -m "## 改动……"          # annotated tag 的描述就是 Release notes
+git add -A && git commit -m "chore: release 1.1.4"
+git tag -a v1.1.4 -m "## 改动……"          # annotated tag 的描述就是 Release notes
 git push --follow-tags
-npm publish                               # npm 解封后再发
+npm publish                               # 见上面的 staged publishing 说明
 ```
 
 打 GitHub Release：推 tag 会触发 `.github/workflows/release.yml`，自动跑测试、打包两份 tarball，并从 annotated tag 对象读取描述作为正文创建 Release。Release 已存在时改为重写正文并用 `--clobber` 重传资产；因此已发布的 Release 要改 notes 或补资产时，编辑 annotated tag 后在 Actions 里手动运行一次该 workflow（`workflow_dispatch`，填 tag）即可。Actions 不可用时手动兜底：
@@ -104,3 +111,11 @@ gh release create v1.1.3 --title "dsh-message-rewind v1.1.3" --notes-from-tag \
 2. 当前发布的是非 scoped 的 `dsh-message-rewind`；`access: public` 对它是 no-op，保留是为了以后改回 scoped 包时不出错。
 
 发布前 `npm test` 和 `npm pack --dry-run` 都必须过（`prepublishOnly` 已自动跑测试；CI 在 `.github/workflows/test.yml` 里跑 Node 20/22/24 × Linux/Windows）。
+
+## 插件市场（awesome-dsh-plugin）
+
+条目已收录：`data/plugins/xCube007__dsh-message-rewind.yml`（awesome-dsh-plugin 仓库，2026-10-30 合并）。三类更新方式不同：
+
+- **版本号 / 安装命令 / capabilities**：自动。市场每晚 02:23 UTC 构建时 probe npm 的 `dist-tags.latest`，npm 发了版，卡片和详情页自己会变；安装命令会显示成 `dsh plugin --profile web add dsh-message-rewind`。
+- **截图**：自动。改本仓库根目录的 `screenshots.json` 并推送即可，市场构建时从作者仓库解析，不用提 PR。
+- **描述 / 分类 / icon / tarball 链接**：要 PR。只改 `data/plugins/xCube007__dsh-message-rewind.yml` 那一条；市场那边的两个 README 是生成物，禁止手改。
