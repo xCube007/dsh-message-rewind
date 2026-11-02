@@ -83,8 +83,8 @@ Remove-Item "$env:TEMP\npm-publish.rc" -Force
 ```bash
 npm version patch --no-git-tag-version   # 只改 package.json 版本号
 npm test
-git add -A && git commit -m "chore: release 1.1.4"
-git tag -a v1.1.4 -m "## 改动……"          # annotated tag 的描述就是 Release notes
+git add -A && git commit -m "chore: release <version>"
+git tag -a v<version> -m "## 改动……"       # annotated tag 的描述就是 Release notes
 git push --follow-tags
 npm publish                               # 见上面的 staged publishing 说明
 ```
@@ -92,8 +92,8 @@ npm publish                               # 见上面的 staged publishing 说�
 打 GitHub Release：推 tag 会触发 `.github/workflows/release.yml`，自动跑测试、打包两份 tarball，并从 annotated tag 对象读取描述作为正文创建 Release。Release 已存在时改为重写正文并用 `--clobber` 重传资产；因此已发布的 Release 要改 notes 或补资产时，编辑 annotated tag 后在 Actions 里手动运行一次该 workflow（`workflow_dispatch`，填 tag）即可。Actions 不可用时手动兜底：
 
 ```bash
-gh release create v1.1.3 --title "dsh-message-rewind v1.1.3" --notes-from-tag \
-  dsh-message-rewind-1.1.3.tgz dsh-message-rewind.tgz
+gh release create v<version> --title "dsh-message-rewind v<version>" --notes-from-tag \
+  dsh-message-rewind-<version>.tgz dsh-message-rewind.tgz
 ```
 
 注意：`npm version` 默认会自己建一个只有版本号的 tag，那样 Release notes 只有一行；所以用 `--no-git-tag-version` 再手动打 annotated tag。同名 tag 已存在时不要再 `git tag`（会报 already exists）。
