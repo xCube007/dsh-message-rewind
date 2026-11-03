@@ -113,8 +113,11 @@ gh release create v<version> --title "dsh-message-rewind v<version>" --notes-fro
 
 发布前 `npm test` 和 `npm pack --dry-run` 都必须过（`prepublishOnly` 已自动跑测试；CI 在 `.github/workflows/test.yml` 里跑 Node 20/22/24 × Linux/Windows）。
 
-## 插件市场（awesome-dsh-plugin）
+### README 截图
 
+README 里的截图用 **tag 固定地址** `https://raw.githubusercontent.com/xCube007/dsh-message-rewind/vX.Y.Z/img/...`，不要用 `main`：raw CDN 对同名路径缓存很久（加 `?v=` 查询参数也不会失效），指 `main` 时改完图读者仍会看到旧图。改图或发版时把 URL 里的 tag 换成新版本，并逐个确认返回 200、大小与本地一致。
+
+## 插件市场（awesome-dsh-plugin）
 条目已收录：`data/plugins/xCube007__dsh-message-rewind.yml`（awesome-dsh-plugin 仓库，2026-10-30 合并）。三类更新方式不同：
 
 - **版本号 / 安装命令 / capabilities**：自动。市场每晚 02:23 UTC 构建时 probe npm 的 `dist-tags.latest`，npm 发了版，卡片和详情页自己会变；安装命令会显示成 `dsh plugin --profile web add dsh-message-rewind`。

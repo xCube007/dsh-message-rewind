@@ -25,19 +25,19 @@ Only messages you sent have these buttons. The **Copy** button is still there, i
 
 Your own messages get **edit / delete / copy** buttons under the bubble:
 
-<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions.png" alt="Edit, delete and copy buttons under a user message" width="760">
+<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/message-actions.png" alt="Edit, delete and copy buttons under a user message" width="760">
 
 The popover opens right under the button you clicked and points at it with a small arrow; click outside or press Esc to dismiss it. The editor reads the file changes recorded after that message as soon as it opens — collapsed into one **N file changes recorded** line unless you expand it — and a two-way switch decides whether files are restored too:
 
 | Edit popover | Delete confirmation |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog.png" alt="Edit popover: file changes collapse to one line, rollback scope is a two-way switch" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog.png" alt="Delete confirmation: a one-line confirm when no files changed" width="360"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/edit-dialog.png" alt="Edit popover: file changes collapse to one line, rollback scope is a two-way switch" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/delete-dialog.png" alt="Delete confirmation: a one-line confirm when no files changed" width="360"> |
 
 The popover follows its button: it flips above when there is no room below, narrows to the screen width on small viewports, and keeps the same layering in the light theme:
 
 | Flips above near the bottom | Narrow screen (390px) | Light theme |
 | :---: | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-flip.png" alt="Popover flipped above the button, arrow pointing down at it" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-narrow.png" alt="Popover narrowed to a 390px viewport" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-light.png" alt="Delete popover in the light theme" width="240"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/popover-flip.png" alt="Popover flipped above the button, arrow pointing down at it" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/popover-narrow.png" alt="Popover narrowed to a 390px viewport" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/popover-light.png" alt="Delete popover in the light theme" width="240"> |
 
 Snapshot and Git-worktree limits are shown in the popover itself, not after a failed operation.
 
