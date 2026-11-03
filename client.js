@@ -9,17 +9,17 @@ window.__ModuleLoader__.load({
     const zh = {
       edit: '编辑并重发', remove: '删除这条消息及其后的对话', copy: '复制', copied: '已复制',
       'clock.md': '{m}月{d}日', 'clock.ymd': '{y}年{m}月{d}日',
-      cancel: '取消', close: '关闭', loading: '正在检查文件改动…', save: '保存并重发', deleteConfirm: '删除', scope: '回滚范围', body: '消息内容',
-      editTitle: '编辑并重新发送', deleteTitle: '删除这条消息？',
-      editHint: '将删除这条消息及其后的所有对话，并用修改后的内容重新发送。删除前的记录会被永久删除，无法恢复。',
-      deleteHint: '将删除这条消息及其后的所有对话。删除前的记录会被永久删除，无法恢复。',
-      hasFiles: '这条消息之后记录到以下文件改动：',
-      messagesOnly: '只回滚消息', withFiles: '同时回滚消息和文件',
-      fileWarning: '文件会恢复到这条消息之前的内容；若文件之后又被修改，将停止而不会覆盖。',
-      incomplete: '部分改动快照已不可用，无法完整回滚文件；仍可以只回滚消息。',
+      cancel: '取消', loading: '正在检查文件改动…', save: '保存并重发', deleteConfirm: '删除', scope: '回滚范围', body: '消息内容',
+      editTitle: '编辑消息', deleteTitle: '删除这条消息？',
+      editNote: '截断之后的对话，再按新内容重发。',
+      deleteNote: '之后的对话会一起删除，无法恢复。',
+      filesCount: '已记录 {n} 处文件改动',
+      messagesOnly: '只回滚消息', withFiles: '连文件一起回滚',
+      fileWarning: '文件会还原到这条消息之前。',
+      incomplete: '文件快照已失效，只能回滚消息。',
       running: '当前有未结束的轮次，请先停止运行',
-      queued: '还有排队中的消息，会随原记录一起作废。',
-      noGit: '当前工作区不在 Git 仓库内：只能记录 DSH 文件工具（写/改）动过的文件，shell 命令删除或修改的文件无法回滚。在这个目录执行 git init 后即可完整记录。',
+      queued: '排队中的消息会一并作废。',
+      noGit: '工作区不在 Git 仓库内：只有 DSH 文件工具的改动可回滚。',
       attachments: '含附件的消息暂时只能删除，不能编辑',
       empty: '消息不能为空', failed: '操作失败，请重试。', dialog: '消息回滚',
       'error.invalid-message': '消息位置无效。',
@@ -51,17 +51,17 @@ window.__ModuleLoader__.load({
     const en = {
       edit: 'Edit and resend', remove: 'Delete this message and every following turn', copy: 'Copy', copied: 'Copied',
       'clock.md': '{m}/{d}', 'clock.ymd': '{y}-{m}-{d}',
-      cancel: 'Cancel', close: 'Close', loading: 'Checking file changes…', save: 'Save and resend', deleteConfirm: 'Delete', scope: 'Rollback scope', body: 'Message text',
-      editTitle: 'Edit and resend', deleteTitle: 'Delete this message?',
-      editHint: 'Deletes this message and every following turn, then sends the edited text. The prior record is deleted for good and cannot be restored.',
-      deleteHint: 'Deletes this message and every following turn. The prior record is deleted for good and cannot be restored.',
-      hasFiles: 'File changes were recorded after this message:',
-      messagesOnly: 'Roll back messages only', withFiles: 'Roll back messages and files',
-      fileWarning: 'Files are restored to their state before this message. Later edits stop the operation instead of being overwritten.',
-      incomplete: 'Some snapshots are unavailable, so files cannot be fully rolled back. Rolling back messages only still works.',
+      cancel: 'Cancel', loading: 'Checking file changes…', save: 'Save and resend', deleteConfirm: 'Delete', scope: 'Rollback scope', body: 'Message text',
+      editTitle: 'Edit message', deleteTitle: 'Delete this message?',
+      editNote: 'Cuts off later turns, then resends.',
+      deleteNote: 'Following turns are deleted too, for good.',
+      filesCount: '{n} file changes recorded',
+      messagesOnly: 'Messages only', withFiles: 'Messages + files',
+      fileWarning: 'Files are restored to their state before this message.',
+      incomplete: 'File snapshots are gone; messages only.',
       running: 'A turn is still running — stop it first',
-      queued: 'Queued prompts are discarded along with the deleted record.',
-      noGit: 'This workspace is not inside a Git repository, so only files touched by DSH write/edit tools are recorded; files changed by shell commands cannot be rolled back. Run git init in this directory to record everything.',
+      queued: 'Queued prompts are discarded too.',
+      noGit: 'No Git here: only DSH file-tool edits can be rolled back.',
       attachments: 'Messages with attachments can only be deleted, not edited',
       empty: 'Message cannot be empty', failed: 'Operation failed. Please try again.', dialog: 'Message rewind',
       'error.invalid-message': 'Invalid message position.',
@@ -100,30 +100,59 @@ window.__ModuleLoader__.load({
       .dmr-action:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}
       .dmr-action:disabled,.dmr-action[data-unavailable]{cursor:default;opacity:.4}
       .dmr-action:disabled:hover{background:0 0;color:var(--dsw-alias-label-tertiary)}
+      .dmr-action:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}
       .dmr-danger:not(:disabled):hover{color:var(--dsw-alias-state-error-primary)}
-      .dmr-mask{position:fixed;inset:0;z-index:1000;pointer-events:auto;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsw-mask-blur);display:flex;align-items:center;justify-content:center;padding:24px}
-      .dmr-modal{box-sizing:border-box;width:min(460px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-lg);box-shadow:var(--dsw-elevation-prominent);padding:20px}
-      .dmr-title{font-size:16px;font-weight:600;line-height:24px;margin:0 0 10px}
-      .dmr-hint{font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary);margin:0 0 12px}
-      .dmr-text{box-sizing:border-box;width:100%;min-height:140px;resize:vertical;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:14px;line-height:22px;padding:10px 12px}
-      .dmr-text:focus{outline:2px solid var(--dsw-focus-ring-color);outline-offset:1px}
-      .dmr-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}
-      .dmr-button{border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;line-height:20px;padding:7px 12px;cursor:pointer}
-      .dmr-button:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover)}
-      .dmr-button:focus-visible{outline:2px solid var(--dsw-focus-ring-color);outline-offset:2px}
-      .dmr-button:disabled{opacity:.5;cursor:not-allowed}
-      .dmr-primary{background:var(--dsw-alias-button-primary-fill);border-color:transparent;color:var(--dsw-alias-label-primary-foreground);font-weight:500}
-      .dmr-primary:not(:disabled):hover{background:var(--dsw-alias-button-primary-hover)}
-      .dmr-files{margin:0 0 12px;padding:10px 12px;max-height:150px;overflow:auto;background:var(--dsw-alias-bg-layer-2);border-radius:var(--dsw-radius-md);font:12px/20px var(--ds-font-family-code);color:var(--dsw-alias-label-secondary);list-style:none;overflow-wrap:anywhere}
-      .dmr-choice{margin:0 0 12px;display:flex;flex-direction:column;gap:4px}
-      .dmr-choice-title{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);margin:0 0 2px}
-      .dmr-option{display:flex;align-items:center;gap:8px;font-size:13px;line-height:22px;color:var(--dsw-alias-label-primary);cursor:pointer}
-      .dmr-option input{margin:0;accent-color:var(--dsw-alias-button-primary-fill);cursor:pointer}
-      .dmr-option-disabled{color:var(--dsw-alias-label-tertiary);cursor:not-allowed}
-      .dmr-option-disabled input{cursor:not-allowed}
-      .dmr-warning{color:var(--dsw-alias-state-warn-primary);font-size:12px;line-height:18px;margin:10px 0}
-      .dmr-error{color:var(--dsw-alias-state-error-primary);font-size:12px;line-height:18px;margin:12px 0;overflow-wrap:anywhere}
-      @media (max-width:480px){.dmr-mask{padding:12px}.dmr-modal{padding:16px}.dmr-footer{flex-direction:column}.dmr-button{width:100%}}
+      .dmr-layer{position:fixed;inset:0;z-index:1000;pointer-events:none}
+      .dmr-pop{position:fixed;z-index:1;box-sizing:border-box;visibility:hidden;pointer-events:auto;padding:14px 14px 12px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);box-shadow:var(--dsw-elevation-prominent);font-size:13px;line-height:20px}
+      .dmr-pop-edit{width:min(420px,calc(100vw - 16px))}
+      .dmr-pop-delete{width:min(320px,calc(100vw - 16px))}
+      .dmr-pop[data-ready]{visibility:visible}
+      .dmr-pop[data-ready][data-side=bottom]{animation:dmr-drop .15s cubic-bezier(.2,.9,.3,1) both}
+      .dmr-pop[data-ready][data-side=top]{animation:dmr-rise .15s cubic-bezier(.2,.9,.3,1) both}
+      .dmr-pop:focus{outline:none}
+      .dmr-arrow{position:absolute;top:-6px;left:0;box-sizing:border-box;width:11px;height:11px;background:inherit;border:1px solid var(--dsw-alias-border-l2);transform:rotate(45deg);pointer-events:none}
+      .dmr-pop[data-side=bottom] .dmr-arrow{border-right-color:transparent;border-bottom-color:transparent}
+      .dmr-pop[data-side=top] .dmr-arrow{top:auto;bottom:-6px;border-left-color:transparent;border-top-color:transparent}
+      @keyframes dmr-drop{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes dmr-rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+      .dmr-head{margin:0 0 8px}
+      .dmr-title{font-size:13px;font-weight:600;line-height:19px;margin:0;color:var(--dsw-alias-label-primary)}
+      .dmr-note{font-size:12px;line-height:17px;margin:3px 0 0;color:var(--dsw-alias-label-tertiary)}
+      .dmr-body{max-height:min(62vh,460px);overflow:auto;overscroll-behavior:contain}
+      .dmr-body>:first-child{margin-top:0}
+      .dmr-text{display:block;box-sizing:border-box;width:100%;min-height:104px;max-height:220px;resize:vertical;margin:0;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-sm);background:0 0;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;line-height:20px;padding:8px 10px;transition:border-color .12s}
+      .dmr-text:hover{border-color:var(--dsw-alias-border-l3)}
+      .dmr-text:focus{outline:none;border-color:var(--dsw-alias-state-business-primary)}
+      .dmr-files-block{margin:10px 0 0}
+      .dmr-summary{display:flex;align-items:center;gap:7px;width:fit-content;padding:1px 0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary);cursor:pointer;list-style:none;user-select:none;border-radius:var(--dsw-radius-xs)}
+      .dmr-summary::-webkit-details-marker{display:none}
+      .dmr-summary:hover{color:var(--dsw-alias-label-primary)}
+      .dmr-summary:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}
+      .dmr-chevron{width:5px;height:5px;flex:0 0 auto;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .12s}
+      .dmr-files-block[open] .dmr-chevron{transform:rotate(45deg)}
+      .dmr-files{display:flex;flex-direction:column;gap:2px;max-height:112px;overflow:auto;margin:6px 0 0;padding:0 0 0 12px;list-style:none}
+      .dmr-files li{font:11.5px/16px var(--ds-font-family-code,ui-monospace,monospace);color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere}
+      .dmr-scope{display:flex;gap:2px;margin:10px 0 0;padding:2px;background:var(--dsw-alias-interactive-bg-hover);border-radius:calc(var(--dsw-radius-sm) + 1px)}
+      .dmr-seg{flex:1 1 0;min-width:0;overflow:hidden;border:0;border-radius:var(--dsw-radius-xs);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:16px;padding:4px 6px;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+      .dmr-seg:hover{color:var(--dsw-alias-label-primary)}
+      .dmr-seg[aria-checked=true]{background:var(--dsw-alias-button-elevated-fill);color:var(--dsw-alias-label-primary);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.16),0 0 0 .5px var(--dsw-alias-border-l2)}
+      .dmr-seg:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}
+      .dmr-warning{margin:8px 0 0;font-size:12px;line-height:17px;color:var(--dsw-alias-state-warn-primary)}
+      .dmr-error{margin:8px 0 0;font-size:12px;line-height:17px;color:var(--dsw-alias-state-error-primary);overflow-wrap:anywhere}
+      .dmr-hint{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-size:12px;line-height:17px;color:var(--dsw-alias-label-tertiary)}
+      .dmr-spinner{width:11px;height:11px;flex:0 0 auto;border:1.5px solid var(--dsw-alias-border-l4);border-top-color:var(--dsw-alias-label-tertiary);border-radius:50%;animation:dmr-spin .8s linear infinite}
+      @keyframes dmr-spin{to{transform:rotate(360deg)}}
+      .dmr-footer{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
+      .dmr-button{border:0;border-radius:var(--dsw-radius-sm);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;line-height:18px;padding:5px 10px;white-space:nowrap;cursor:pointer;transition:background .12s,color .12s}
+      .dmr-button:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
+      .dmr-button:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}
+      .dmr-button:disabled{opacity:.45;cursor:not-allowed}
+      .dmr-primary{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-foreground);font-weight:500;padding:5px 12px}
+      .dmr-primary:not(:disabled):hover{background:var(--dsw-alias-button-primary-hover);color:var(--dsw-alias-label-primary-foreground)}
+      .dmr-destructive{background:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-label-primary-foreground);font-weight:500;padding:5px 12px}
+      .dmr-destructive:not(:disabled):hover{background:var(--dsw-alias-state-error-primary);box-shadow:inset 0 0 0 999px rgba(0,0,0,.12);color:var(--dsw-alias-label-primary-foreground)}
+      @media (prefers-reduced-motion:reduce){.dmr-pop[data-ready]{animation:none}.dmr-spinner{animation-duration:2.4s}}
+      @media (max-width:480px){.dmr-pop{padding:12px 12px 10px}.dmr-pop-edit,.dmr-pop-delete{width:calc(100vw - 16px)}}
     `;
 
     const pad2 = (value) => String(value).padStart(2, '0');
@@ -174,34 +203,122 @@ window.__ModuleLoader__.load({
       return { text: texts.join(''), attachments, rest };
     }
 
-    function Modal({ title, locked, onClose, children }) {
+    // Popover geometry stays pure so client.test.js can exercise the flip/clamp
+    // math without a browser; the markers below delimit the extractable region.
+    // #region popover-geometry
+    const POP_GAP = 8;
+    const POP_MARGIN = 8;
+    const ARROW_SIZE = 11;
+    const ARROW_INSET = 14;
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+    /** Below the trigger when it fits, otherwise above; clamp both axes and the arrow. */
+    function placePopover(anchor, pop, view) {
+      const roomBelow = view.height - anchor.bottom - POP_GAP - POP_MARGIN;
+      const roomAbove = anchor.top - POP_GAP - POP_MARGIN;
+      const below = roomBelow >= pop.height || roomBelow >= roomAbove;
+      const center = anchor.left + anchor.width / 2;
+      const left = clamp(center - pop.width / 2, POP_MARGIN, view.width - pop.width - POP_MARGIN);
+      const rawTop = below ? anchor.bottom + POP_GAP : anchor.top - POP_GAP - pop.height;
+      const top = clamp(rawTop, POP_MARGIN, view.height - pop.height - POP_MARGIN);
+      const arrow = clamp(center - left - ARROW_SIZE / 2, ARROW_INSET, pop.width - ARROW_INSET - ARROW_SIZE);
+      return { left: Math.round(left), top: Math.round(top), arrow: Math.round(arrow), below };
+    }
+    // #endregion
+
+    function Popover({ anchor, kind, title, note, locked, onClose, children, footer }) {
       const ref = React.useRef(null);
+      const [layout, setLayout] = React.useState(null);
       const lockedRef = React.useRef(locked);
       lockedRef.current = locked;
-      React.useEffect(() => {
+      // Measure before paint when the host React supports it, so the popover is
+      // never shown at a stale position for a frame. The headless test harness
+      // only provides useEffect, hence the fallback.
+      const useEffect = typeof React.useLayoutEffect === 'function' ? React.useLayoutEffect : React.useEffect;
+      // Mount-only: the popover is unmounted whenever the dialog closes, and a
+      // fresh instance id remounts it per open, so the captured anchor is live.
+      useEffect(() => {
+        const node = ref.current;
+        const trigger = anchor;
         const previous = document.activeElement;
-        const target = ref.current?.querySelector('textarea, button');
-        target?.focus();
-        if (target?.tagName === 'TEXTAREA' && typeof target.setSelectionRange === 'function') target.setSelectionRange(target.value.length, target.value.length);
+        const first = node?.querySelector?.('textarea, button');
+        if (first && typeof first.focus === 'function') {
+          first.focus();
+          if (first.tagName === 'TEXTAREA' && typeof first.setSelectionRange === 'function') first.setSelectionRange(first.value.length, first.value.length);
+        }
+        let frame = 0;
+        const measure = () => {
+          if (!node || typeof node.getBoundingClientRect !== 'function') return;
+          // Client sizes exclude the scrollbar, so the popover never tucks under it.
+          const view = {
+            width: document.documentElement?.clientWidth || window.innerWidth || 0,
+            height: document.documentElement?.clientHeight || window.innerHeight || 0,
+          };
+          // A missing or detached trigger (keyboard shortcut, collapsed row)
+          // still gets a sensible spot: centred, above the middle of the view.
+          const box = typeof trigger?.getBoundingClientRect === 'function' && trigger.isConnected !== false
+            ? trigger.getBoundingClientRect()
+            : { top: Math.round(view.height * 0.3), bottom: Math.round(view.height * 0.3), left: view.width / 2, width: 0 };
+          const next = placePopover(box, node.getBoundingClientRect(), view);
+          setLayout((last) => (last !== null && last.left === next.left && last.top === next.top && last.arrow === next.arrow && last.below === next.below ? last : next));
+        };
+        const raf = typeof window.requestAnimationFrame === 'function' ? window.requestAnimationFrame.bind(window) : null;
+        const caf = typeof window.cancelAnimationFrame === 'function' ? window.cancelAnimationFrame.bind(window) : null;
+        const schedule = raf === null ? measure : () => { if (frame !== 0) return; frame = raf(() => { frame = 0; measure(); }); };
         const onKey = (event) => {
           if (event.key === 'Escape' && !lockedRef.current) { event.preventDefault(); onClose(); return; }
-          if (event.key !== 'Tab') return;
-          const items = [...(ref.current?.querySelectorAll('textarea, input:not(:disabled), button:not(:disabled)') ?? [])];
+          if (event.key !== 'Tab' || !node) return;
+          const items = [...(node.querySelectorAll?.('textarea, input:not(:disabled), button:not(:disabled)') ?? [])];
           if (items.length === 0) { event.preventDefault(); return; }
-          const first = items[0];
-          const last = items[items.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+          const firstItem = items[0];
+          const lastItem = items[items.length - 1];
+          if (event.shiftKey && document.activeElement === firstItem) { event.preventDefault(); lastItem.focus(); }
+          else if (!event.shiftKey && document.activeElement === lastItem) { event.preventDefault(); firstItem.focus(); }
         };
-        document.addEventListener('keydown', onKey);
+        // Click-away dismisses; the trigger is excluded because its own click
+        // toggles the popover, and a busy write is never abandoned.
+        const onAway = (event) => {
+          if (lockedRef.current) return;
+          const target = event.target;
+          if (!target || node?.contains?.(target) || trigger?.contains?.(target)) return;
+          onClose();
+        };
+        const follow = () => schedule();
+        document.addEventListener?.('keydown', onKey);
+        document.addEventListener?.('mousedown', onAway, true);
+        window.addEventListener?.('scroll', follow, true);
+        window.addEventListener?.('resize', follow);
+        let observer = null;
+        if (typeof ResizeObserver === 'function' && node) { observer = new ResizeObserver(() => schedule()); observer.observe(node); }
+        measure();
         return () => {
-          document.removeEventListener('keydown', onKey);
+          document.removeEventListener?.('keydown', onKey);
+          document.removeEventListener?.('mousedown', onAway, true);
+          window.removeEventListener?.('scroll', follow, true);
+          window.removeEventListener?.('resize', follow);
+          observer?.disconnect?.();
+          if (caf !== null && frame !== 0) caf(frame);
           if (previous?.isConnected !== false) previous?.focus?.();
         };
-      }, [onClose]);
-      return h('div', { className: 'dmr-mask', onMouseDown: (event) => { if (event.target === event.currentTarget && !lockedRef.current) onClose(); } },
-        h('section', { className: 'dmr-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, ref },
-          h('h2', { className: 'dmr-title' }, title), children));
+      }, []);
+      const side = layout === null || layout.below ? 'bottom' : 'top';
+      return h('div', { className: 'dmr-layer' },
+        h('div', {
+          className: `dmr-pop dmr-pop-${kind}`,
+          role: 'dialog',
+          'aria-modal': 'false',
+          'aria-label': title,
+          tabIndex: -1,
+          ref,
+          'data-side': side,
+          'data-ready': layout === null ? undefined : '',
+          style: layout === null ? undefined : { top: `${layout.top}px`, left: `${layout.left}px` },
+        },
+        h('span', { className: 'dmr-arrow', 'aria-hidden': 'true', style: layout === null ? undefined : { left: `${layout.arrow}px` } }),
+        h('div', { className: 'dmr-head' },
+          h('h2', { className: 'dmr-title' }, title),
+          note ? h('p', { className: 'dmr-note' }, note) : null),
+        h('div', { className: 'dmr-body' }, children),
+        footer));
     }
 
     return {
@@ -266,6 +383,9 @@ window.__ModuleLoader__.load({
         };
 
         let current = null;
+        // Each open mints an instance id: it keys the popover (a fresh button
+        // anchor and a fresh measurement per open) and discards a stale draft.
+        let opens = 0;
         const listeners = new Set();
         const publish = (next) => { current = next; for (const listener of listeners) listener(); };
         const subscribe = (listener) => { listeners.add(listener); return () => listeners.delete(listener); };
@@ -347,23 +467,26 @@ window.__ModuleLoader__.load({
           }
         }
 
-        function openEdit(sessionId, seq, text) {
-          const dialog = { token: {}, kind: 'edit', sessionId, seq, text, phase: 'edit', busy: false, checking: true, error: null, details: null, abort: new AbortController() };
+        const isOpenFor = (kind, sessionId, seq) => current !== null && current.kind === kind && current.sessionId === sessionId && current.seq === seq;
+
+        function openEdit(sessionId, seq, text, anchor) {
+          const dialog = { token: {}, instance: ++opens, kind: 'edit', sessionId, seq, text, anchor: anchor ?? null, phase: 'edit', busy: false, checking: true, error: null, details: null, abort: new AbortController() };
           publish(dialog);
           void inspectEdit(dialog);
         }
 
-        function openDelete(sessionId, seq) {
-          publish({ token: {}, kind: 'delete', sessionId, seq, text: '', phase: 'loading', busy: true, error: null, details: null, abort: new AbortController() });
+        function openDelete(sessionId, seq, anchor) {
+          publish({ token: {}, instance: ++opens, kind: 'delete', sessionId, seq, text: '', anchor: anchor ?? null, phase: 'loading', busy: true, error: null, details: null, abort: new AbortController() });
           void check();
         }
 
         function RewindDialog() {
           const dialog = React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-          const [text, setText] = React.useState('');
-          const key = dialog ? `${dialog.sessionId}:${dialog.seq}:${dialog.kind}` : null;
-          React.useEffect(() => { setText(dialog?.text ?? ''); }, [key]);
+          // Typing is local until save; the draft belongs to one opening, so a
+          // popover reopened for the same message starts from the message text.
+          const [draft, setDraft] = React.useState(null);
           if (!dialog) return null;
+          const text = draft !== null && draft.instance === dialog.instance ? draft.text : dialog.text;
           const editing = dialog.kind === 'edit';
           const phase = dialog.phase;
           const details = dialog.details;
@@ -371,62 +494,50 @@ window.__ModuleLoader__.load({
           const blocked = Boolean(details?.unfinished);
           const selected = dialog.withFiles === true;
           const canRollback = details !== null && files.length > 0 && !details.incomplete;
-          // Both dialogs ask the same question — how far the rewind reaches — and
-          // differ only in the action that follows it, so the choice renders once.
-          const fileSection = details !== null && (files.length > 0 || details.incomplete) ? h(React.Fragment, null,
-            files.length > 0 && h('p', { className: 'dmr-hint' }, t('hasFiles')),
-            files.length > 0 && h('ul', { className: 'dmr-files' }, files.map((file, index) => h('li', { key: `${index}:${file}` }, file))),
-            h('div', { className: 'dmr-choice', role: 'radiogroup', 'aria-label': t('scope') },
-              h('p', { className: 'dmr-choice-title' }, t('scope')),
-              h('label', { className: 'dmr-option' },
-                h('input', {
-                  type: 'radio',
-                  name: 'dmr-rollback-scope',
-                  checked: !selected,
-                  onChange: () => patchIf(dialog.token, { withFiles: false }),
-                }),
-                t('messagesOnly')),
-              h('label', { className: canRollback ? 'dmr-option' : 'dmr-option dmr-option-disabled' },
-                h('input', {
-                  type: 'radio',
-                  name: 'dmr-rollback-scope',
-                  checked: selected,
-                  disabled: !canRollback,
-                  onChange: () => patchIf(dialog.token, { withFiles: true }),
-                }),
-                t('withFiles'))),
-            h('p', { className: 'dmr-warning' }, details.incomplete ? t('incomplete') : t('fileWarning'))) : null;
-          const cancelButton = h('button', { className: 'dmr-button', type: 'button', onClick: close, disabled: dialog.busy }, t('cancel'));
-          return h(Modal, {
-            title: editing ? t('editTitle') : t('deleteTitle'),
-            locked: dialog.busy && phase !== 'loading',
-            onClose: close,
-          },
-          phase === 'edit' && h(React.Fragment, null,
-            h('p', { className: 'dmr-hint' }, t('editHint')),
-            h('textarea', {
-              className: 'dmr-text',
-              value: text,
-              disabled: dialog.busy,
-              'aria-label': t('body'),
-              onChange: (event) => setText(event.target.value),
-            }),
-            dialog.checking && h('p', { className: 'dmr-hint' }, t('loading')),
-            fileSection),
-          phase === 'loading' && h(React.Fragment, null,
-            h('p', { className: 'dmr-hint' }, t('loading')),
-            h('div', { className: 'dmr-footer' },
-              h('button', { className: 'dmr-button', type: 'button', onClick: close }, t('cancel')))),
-          phase === 'confirm' && h(React.Fragment, null,
-            h('p', { className: 'dmr-hint' }, t('deleteHint')),
-            fileSection),
-          blocked && h('p', { className: 'dmr-warning', role: 'status' }, t('running')),
-          (details?.queued ?? 0) > 0 && h('p', { className: 'dmr-warning', role: 'status' }, t('queued')),
-          details?.git === false && h('p', { className: 'dmr-warning', role: 'status' }, t('noGit')),
-          dialog.error && h('p', { className: 'dmr-error', role: 'alert' }, dialog.error),
-          phase === 'edit' && h('div', { className: 'dmr-footer' },
-            cancelButton,
+          const spinnerLine = h('p', { className: 'dmr-hint' }, h('span', { className: 'dmr-spinner', 'aria-hidden': 'true' }), t('loading'));
+          // Both dialogs ask the same question — how far the rewind reaches — so
+          // the scope control is built once. A lost snapshot leaves exactly one
+          // possible answer, so no choice is offered at all.
+          const scope = canRollback ? h('div', { className: 'dmr-scope', role: 'radiogroup', 'aria-label': t('scope') },
             h('button', {
+              className: 'dmr-seg',
+              type: 'button',
+              role: 'radio',
+              'aria-checked': !selected,
+              onClick: () => patchIf(dialog.token, { withFiles: false }),
+            }, t('messagesOnly')),
+            h('button', {
+              className: 'dmr-seg',
+              type: 'button',
+              role: 'radio',
+              'aria-checked': selected,
+              onClick: () => patchIf(dialog.token, { withFiles: true }),
+            }, t('withFiles'))) : null;
+          const fileSection = details !== null && (files.length > 0 || details.incomplete) ? h(React.Fragment, null,
+            files.length > 0 && h('details', { className: 'dmr-files-block' },
+              h('summary', { className: 'dmr-summary' },
+                h('span', { className: 'dmr-chevron', 'aria-hidden': 'true' }),
+                t('filesCount', { n: files.length })),
+              h('ul', { className: 'dmr-files' }, files.map((file, index) => h('li', { key: `${index}:${file}`, title: file }, file)))),
+            scope,
+            details.incomplete
+              ? h('p', { className: 'dmr-warning', role: 'status' }, t('incomplete'))
+              : selected ? h('p', { className: 'dmr-hint' }, t('fileWarning')) : null,
+            details.git === false ? h('p', { className: 'dmr-hint' }, t('noGit')) : null) : null;
+          const content = phase === 'edit'
+            ? h(React.Fragment, null,
+              h('textarea', {
+                className: 'dmr-text',
+                value: text,
+                disabled: dialog.busy,
+                'aria-label': t('body'),
+                onChange: (event) => setDraft({ instance: dialog.instance, text: event.target.value }),
+              }),
+              dialog.checking ? spinnerLine : null,
+              fileSection)
+            : phase === 'loading' ? spinnerLine : fileSection;
+          const primary = phase === 'edit'
+            ? h('button', {
               className: 'dmr-button dmr-primary',
               type: 'button',
               disabled: dialog.busy || dialog.checking || text.trim() === '' || blocked,
@@ -435,15 +546,32 @@ window.__ModuleLoader__.load({
                 if (details === null) { void inspectEdit(current); return; }
                 void execute(canRollback && selected);
               },
-            }, t('save'))),
-          phase === 'confirm' && h('div', { className: 'dmr-footer' },
-            cancelButton,
-            h('button', {
-              className: 'dmr-button dmr-primary',
+            }, t('save'))
+            : h('button', {
+              className: 'dmr-button dmr-destructive',
               type: 'button',
               disabled: dialog.busy || blocked,
               onClick: () => void execute(canRollback && selected),
-            }, t('deleteConfirm'))));
+            }, t('deleteConfirm'));
+          return h(Popover, {
+            // Remount per open so the anchor/measurement effect always belongs
+            // to the button that is currently being pointed at.
+            key: dialog.instance,
+            anchor: dialog.anchor ?? null,
+            kind: dialog.kind,
+            title: editing ? t('editTitle') : t('deleteTitle'),
+            note: editing ? t('editNote') : t('deleteNote'),
+            locked: dialog.busy && phase !== 'loading',
+            onClose: close,
+            footer: h('div', { className: 'dmr-footer' },
+              h('button', { className: 'dmr-button', type: 'button', onClick: close, disabled: dialog.busy && phase !== 'loading' }, t('cancel')),
+              primary),
+          },
+          h(React.Fragment, null,
+            content,
+            blocked && h('p', { className: 'dmr-warning', role: 'status' }, t('running')),
+            (details?.queued ?? 0) > 0 && h('p', { className: 'dmr-warning', role: 'status' }, t('queued')),
+            dialog.error && h('p', { className: 'dmr-error', role: 'alert' }, dialog.error)));
         }
 
         function UserActions({ node, sessionId, renderFactorySlot, loadImage, useSession }) {
@@ -490,17 +618,25 @@ window.__ModuleLoader__.load({
             title: label,
             onClick,
           }, h(Icon, {}));
+          // The freshly clicked button is the anchor the popover points at;
+          // clicking the same action again toggles it closed.
+          const openFrom = (kind, event) => {
+            const anchor = event?.currentTarget ?? null;
+            if (isOpenFor(kind, sessionId, data.seq)) { close(); return; }
+            if (kind === 'edit') openEdit(sessionId, data.seq, parts.text, anchor);
+            else openDelete(sessionId, data.seq, anchor);
+          };
           return h('div', { className: 'dmr-row' },
             renderFactorySlot('conversation.chat.user.content', { content, loadImage, facts, interactive: true }),
             h('div', { className: 'dmr-actions' },
               data.time === undefined ? null : h('span', { className: 'dmr-time' }, formatMessageClock(data.time, t)),
               button(IconEdit,
                 attachmentBlocked ? t('attachments') : running ? t('running') : t('edit'),
-                () => openEdit(sessionId, data.seq, parts.text),
+                (event) => openFrom('edit', event),
                 { disabled: running || attachmentBlocked }),
               button(IconTrash,
                 running ? t('running') : t('remove'),
-                () => openDelete(sessionId, data.seq),
+                (event) => openFrom('delete', event),
                 { danger: true, disabled: running }),
               button(copied ? IconCheck : IconCopy,
                 copied ? t('copied') : t('copy'),

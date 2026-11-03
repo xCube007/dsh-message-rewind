@@ -1,7 +1,8 @@
 /**
  * Headless smoke test for the client half: it installs against a stubbed Cordis
- * context, then renders the message actions and the confirmation dialog with a
- * minimal React stand-in. No browser and no real React are involved.
+ * context, then renders the message actions and the anchored edit/delete
+ * popover with a minimal React stand-in. No browser and no real React are
+ * involved; the popover's placement math is pure and tested on its own.
  */
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -60,6 +61,7 @@ globalThis.document = {
   activeElement: null,
   addEventListener() {},
   removeEventListener() {},
+  documentElement: { clientWidth: 1280, clientHeight: 800 },
 };
 globalThis.window = {
   setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
@@ -161,20 +163,62 @@ const imageButtons = imageTree.children[1].children.filter(Boolean).slice(1);
 assert.equal(imageButtons[0].props.disabled, true, 'attachment messages disable edit');
 assert.equal(imageButtons[1].props.disabled, undefined, 'attachment messages stay deletable');
 
-// --- edit flow --------------------------------------------------------------
+// --- the dialog is a popover anchored to the clicked button -----------------
 const renderDialog = () => { react.__enter('dialog'); return overlayRegistration.component({}); };
-editButton.props.onClick();
-renderDialog();
-let dialog = renderDialog();
-assert.ok(dialog, 'edit opens the dialog');
-assert.equal(queryAll(dialog, (element) => element.type === 'textarea').at(0).props.value, 'hello');
-await new Promise((resolve) => setImmediate(resolve));
+const popoverOf = (element) => {
+  if (element?.type?.name === 'Popover') return element;
+  return queryAll(element, (candidate) => candidate.type?.name === 'Popover').at(-1) ?? null;
+};
+// The overlay component returns the popover element; expand it the way React
+// would so the rendered tree (head, body, footer) can be inspected.
+const expand = (element) => {
+  const popover = popoverOf(element);
+  if (!popover) return null;
+  const children = popover.children.length === 1 ? popover.children[0] : popover.children;
+  react.__enter('popover');
+  return popover.type({ ...popover.props, children });
+};
+const treeOf = () => expand(renderDialog());
+const clickAction = (element, anchor) => element.props.onClick(anchor === undefined ? undefined : { currentTarget: anchor });
+const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+// --- edit flow --------------------------------------------------------------
+const editAnchor = { tagName: 'BUTTON', id: 'edit-trigger' };
+clickAction(editButton, editAnchor);
+const popover = popoverOf(renderDialog());
+assert.ok(popover, 'edit opens the popover');
+assert.equal(popover.props.kind, 'edit');
+assert.equal(popover.props.anchor, editAnchor, 'the popover points at the button that opened it');
+assert.equal(popover.props.title, 'message-rewind:editTitle');
+assert.equal(popover.props.note, 'message-rewind:editNote', 'one short note instead of a paragraph');
+let dialog = treeOf();
+let pop = dialog.children[0];
+assert.equal(dialog.props.className, 'dmr-layer', 'the popover is not a full-screen dialog');
+assert.equal(pop.props.className, 'dmr-pop dmr-pop-edit');
+assert.equal(pop.props.role, 'dialog');
+assert.equal(pop.props['aria-label'], 'message-rewind:editTitle');
+assert.equal(pop.props['data-side'], 'bottom', 'first paint assumes it hangs below the button');
+assert.equal(pop.props.style, undefined, 'no coordinates until the browser measures');
+assert.equal(pop.children[0].props.className, 'dmr-arrow');
+assert.equal(pop.children[1].props.className, 'dmr-head');
+assert.equal(pop.children[2].props.className, 'dmr-body');
+assert.equal(pop.children[3].props.className, 'dmr-footer');
+const textarea = () => queryAll(treeOf(), (element) => element.type === 'textarea').at(0);
+assert.equal(textarea().props.value, 'hello', 'the message text is prefilled on the first paint');
+textarea().props.onChange({ target: { value: 'hello there' } });
+assert.equal(textarea().props.value, 'hello there', 'typing stays local until save');
+textarea().props.onChange({ target: { value: 'hello' } });
+await tick();
 assert.equal(calls.filter((call) => call[0] === 'rpc.call').at(0)[2], 'inspect', 'opening edit inspects file changes');
 assert.deepEqual(calls.filter((call) => call[0] === 'rpc.call').at(0)[3], { sessionId: 'session-1', seq: 7 });
-const footer = () => queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1);
+const footer = () => queryAll(treeOf(), (element) => element.props?.className === 'dmr-footer').at(-1);
+assert.deepEqual(footer().children.filter(Boolean).map((button) => button.children.join('')), [
+  'message-rewind:cancel',
+  'message-rewind:save',
+], 'cancel plus the primary action');
 footer().children.filter(Boolean).at(-1).props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
-assert.ok(!renderDialog(), 'a clean edit closes the dialog after forking');
+await tick();
+assert.ok(!renderDialog(), 'a clean edit closes the popover after forking');
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession'), [['openSession', 'child-1']], 'the branch is opened');
 await new Promise((resolve) => setTimeout(resolve, 400));
 const purged = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'purge').at(-1);
@@ -182,78 +226,98 @@ assert.deepEqual(purged[3], { sessionId: 'session-1' }, 'the untouched source is
 
 // --- an edit that recorded file changes offers both rollback scopes ---------
 inspectResult = { files: ['test.txt', 'src/app.js'], incomplete: false, unfinished: false };
-editButton.props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
-dialog = renderDialog();
+clickAction(editButton, editAnchor);
+await tick();
+dialog = treeOf();
+const disclosure = queryAll(dialog, (element) => element.type === 'details').at(0);
+assert.equal(disclosure.props.className, 'dmr-files-block', 'the recorded files start collapsed');
+assert.equal(queryAll(disclosure, (element) => element.type === 'summary').at(0).children[1], 'message-rewind:filesCount');
 assert.deepEqual(
-  queryAll(dialog, (element) => element.type === 'li').map((item) => item.children.join('')),
+  queryAll(disclosure, (element) => element.type === 'li').map((item) => item.children.join('')),
   ['test.txt', 'src/app.js'],
-  'the edit dialog lists the recorded files');
-const scopeInputs = queryAll(dialog, (element) => element.type === 'input');
-assert.equal(scopeInputs.length, 2, 'edit offers the shared scope control');
-assert.equal(scopeInputs[0].props.checked, true, 'messages-only is the default');
-assert.equal(scopeInputs[1].props.disabled, false, 'recorded files can be rolled back');
-scopeInputs[1].props.onChange();
-const scopeButtons = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
-assert.deepEqual(scopeButtons.map((button) => button.children.join('')), [
-  'message-rewind:cancel',
-  'message-rewind:save',
-], 'one primary action, with the scope chosen above it');
+  'the recorded files are listed');
+const scope = queryAll(dialog, (element) => element.props?.role === 'radio');
+assert.equal(scope.length, 2, 'edit offers the shared scope control');
+assert.equal(scope[0].props['aria-checked'], true, 'messages-only is the default');
+assert.deepEqual(scope.map((option) => option.children.join('')), [
+  'message-rewind:messagesOnly',
+  'message-rewind:withFiles',
+], 'a compact either/or, not two radio lines');
+scope[1].props.onClick();
+dialog = treeOf();
+const scopeAfter = queryAll(dialog, (element) => element.props?.role === 'radio');
+assert.equal(scopeAfter[1].props['aria-checked'], true, 'the choice sticks');
+assert.equal(queryAll(dialog, (element) => element.props?.className === 'dmr-hint').at(0).children[0], 'message-rewind:fileWarning',
+  'the consequence is only spelled out once files are chosen');
+const scopeButtons = footer().children.filter(Boolean);
 scopeButtons.at(-1).props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
+await tick();
 assert.deepEqual(
   calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1)[3],
   { sessionId: 'session-1', seq: 7, action: 'edit', text: 'hello', rewindFiles: true },
   'the edited text is resent after the files roll back');
-assert.ok(!renderDialog(), 'the dialog closes after rolling back and resending');
+assert.ok(!renderDialog(), 'the popover closes after rolling back and resending');
 await new Promise((resolve) => setTimeout(resolve, 400));
 
-// --- a lost snapshot keeps the control, but file rollback is unavailable ----
+// --- a lost snapshot leaves exactly one choice, so no control is shown ------
 inspectResult = { files: [], incomplete: true, unfinished: false };
-editButton.props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
-dialog = renderDialog();
+clickAction(editButton, editAnchor);
+await tick();
+dialog = treeOf();
 assert.equal(queryAll(dialog, (element) => element.props?.className === 'dmr-warning').at(0).children[0], 'message-rewind:incomplete');
-const staleInputs = queryAll(dialog, (element) => element.type === 'input');
-assert.equal(staleInputs.length, 2, 'the scope control stays visible');
-assert.equal(staleInputs[1].props.disabled, true, 'file rollback is unavailable');
-const staleButtons = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
+assert.equal(queryAll(dialog, (element) => element.props?.role === 'radio').length, 0, 'there is nothing to choose');
+const staleButtons = footer().children.filter(Boolean);
 assert.equal(staleButtons.length, 2, 'cancel plus the messages-only action');
 staleButtons[0].props.onClick();
-assert.ok(!renderDialog(), 'cancel closes the stale-snapshot dialog');
+assert.ok(!renderDialog(), 'cancel closes the stale-snapshot popover');
 inspectResult = { files: [], incomplete: false, unfinished: false };
 
 // --- delete flow ------------------------------------------------------------
-deleteButton.props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
-dialog = renderDialog();
-assert.ok(dialog, 'delete opens the dialog');
+const deleteAnchor = { tagName: 'BUTTON', id: 'delete-trigger' };
+clickAction(deleteButton, deleteAnchor);
+dialog = treeOf();
+pop = dialog.children[0];
+assert.equal(pop.props.className, 'dmr-pop dmr-pop-delete', 'the confirm bubble is narrower');
+assert.equal(popoverOf(renderDialog()).props.anchor, deleteAnchor, 'the delete bubble points at the bin');
+assert.equal(popoverOf(renderDialog()).props.note, 'message-rewind:deleteNote');
+assert.equal(queryAll(dialog, (element) => element.props?.className === 'dmr-hint').at(0).children[1], 'message-rewind:loading');
+const loadingFooter = queryAll(dialog, (element) => element.props?.className === 'dmr-footer').at(0);
+const loadingButtons = loadingFooter.children.filter(Boolean);
+assert.deepEqual(loadingButtons.map((button) => button.children.join('')), [
+  'message-rewind:cancel',
+  'message-rewind:deleteConfirm',
+], 'the confirm stays put while the files are read');
+assert.ok(!loadingButtons[0].props.disabled, 'loading stays cancellable');
+assert.equal(loadingButtons[1].props.disabled, true, 'delete waits for the inspection');
+await tick();
+dialog = treeOf();
 const deleteFooter = queryAll(dialog, (element) => element.props?.className === 'dmr-footer').at(-1);
 const deleteButtons = deleteFooter.children.filter(Boolean);
 assert.equal(deleteButtons.length, 2, 'cancel plus delete');
 deleteButtons.at(-1).props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
+await tick();
 const execute = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1);
 assert.deepEqual(execute[3], { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rewindFiles: false });
-await new Promise((resolve) => setImmediate(resolve));
+await tick();
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession').at(-1), ['openSession', 'child-1']);
 
 // --- delete asks the same question, so it renders the same control ----------
 inspectResult = { files: ['test.txt'], incomplete: false, unfinished: false };
-deleteButton.props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
-dialog = renderDialog();
-const deleteScope = queryAll(dialog, (element) => element.type === 'input');
+clickAction(deleteButton, deleteAnchor);
+await tick();
+dialog = treeOf();
+const deleteScope = queryAll(dialog, (element) => element.props?.role === 'radio');
 assert.equal(deleteScope.length, 2, 'delete offers the same scope control');
-assert.equal(deleteScope[0].props.checked, true, 'messages-only is the default');
-deleteScope[1].props.onChange();
-const deleteActions = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
+assert.equal(deleteScope[0].props['aria-checked'], true, 'messages-only is the default');
+deleteScope[1].props.onClick();
+const deleteActions = queryAll(treeOf(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
 assert.deepEqual(deleteActions.map((button) => button.children.join('')), [
   'message-rewind:cancel',
   'message-rewind:deleteConfirm',
 ], 'the delete action follows the chosen scope');
+assert.match(deleteActions.at(-1).props.className, /dmr-destructive/, 'the destructive confirm is styled as such');
 deleteActions.at(-1).props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
+await tick();
 assert.deepEqual(
   calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1)[3],
   { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rewindFiles: true },
@@ -263,32 +327,69 @@ inspectResult = { files: [], incomplete: false, unfinished: false };
 // let the delayed purge settle before the failure-path test swaps the RPC stub
 await new Promise((resolve) => setTimeout(resolve, 400));
 
+// --- clicking the open action again toggles the popover ---------------------
+clickAction(editButton, editAnchor);
+assert.ok(renderDialog(), 'edit opens');
+textarea().props.onChange({ target: { value: 'unsent draft' } });
+assert.equal(textarea().props.value, 'unsent draft');
+clickAction(editButton, editAnchor);
+assert.ok(!renderDialog(), 'a second click on the same action closes it');
+clickAction(editButton, editAnchor);
+assert.equal(textarea().props.value, 'hello', 'a reopened popover starts from the message, not the old draft');
+clickAction(editButton, editAnchor);
+assert.ok(!renderDialog(), 'and closes again');
+
 // --- host failure codes are localized --------------------------------------
 ctx.connection.rpc.call = () => Promise.resolve({
   ok: false,
   error: { message: '请先停止当前运行', details: { rewindCode: 'open-turn' } },
 });
-deleteButton.props.onClick();
-await new Promise((resolve) => setImmediate(resolve));
-const failed = queryAll(renderDialog(), (element) => element.props?.className === 'dmr-error').at(0);
+clickAction(deleteButton, deleteAnchor);
+await tick();
+const failed = queryAll(treeOf(), (element) => element.props?.className === 'dmr-error').at(0);
 assert.equal(failed.children[0], 'message-rewind:error.open-turn');
+queryAll(treeOf(), (element) => element.props?.className === 'dmr-footer').at(0).children[0].props.onClick();
+assert.ok(!renderDialog(), 'cancel closes the failed popover');
 
-// --- a late response cannot resurrect a closed dialog -----------------------
+// --- a late response cannot resurrect a closed popover ----------------------
 ctx.connection.rpc.call = (channel, endpoint, payload) => {
   calls.push(['rpc.call', channel, endpoint, payload]);
   return new Promise((resolve) => {
     globalThis.setTimeout(() => resolve({ ok: true, value: { files: [], incomplete: false, unfinished: false } }), 20);
   });
 };
-deleteButton.props.onClick();
-const loadingDialog = renderDialog();
+clickAction(deleteButton, deleteAnchor);
+const loadingDialog = treeOf();
 assert.ok(loadingDialog, 'delete opens in the loading phase');
-const loadingFooter = queryAll(loadingDialog, (element) => element.props?.className === 'dmr-footer').at(0);
-loadingFooter.children[0].props.onClick();
+const lateFooter = queryAll(loadingDialog, (element) => element.props?.className === 'dmr-footer').at(0);
+lateFooter.children[0].props.onClick();
 assert.ok(!renderDialog(), 'the loading phase can be cancelled');
 await new Promise((resolve) => setTimeout(resolve, 60));
-assert.ok(!renderDialog(), 'the late inspect response does not reopen the dialog');
+assert.ok(!renderDialog(), 'the late inspect response does not reopen the popover');
+
+// --- placement: below the button, flipped when needed, always on screen -----
+const geometry = source.match(/#region popover-geometry([\s\S]*?)#endregion/);
+assert.ok(geometry, 'the placement block is marked for extraction');
+const { placePopover } = new Function(`${geometry[1]}\nreturn { placePopover };`)();
+const wide = { width: 1280, height: 800 };
+
+assert.deepEqual(
+  placePopover({ left: 1100, top: 100, width: 28, bottom: 128 }, { width: 320, height: 180 }, wide),
+  { left: 952, top: 136, arrow: 157, below: true },
+  'hangs 8px below the button, centred on it, clamped to the right edge');
+assert.deepEqual(
+  placePopover({ left: 600, top: 300, width: 28, bottom: 328 }, { width: 320, height: 180 }, { width: 1280, height: 400 }),
+  { left: 454, top: 112, arrow: 155, below: false },
+  'flips above the button when the space below is too small');
+const edge = placePopover({ left: 8, top: 40, width: 28, bottom: 68 }, { width: 320, height: 180 }, wide);
+assert.deepEqual(edge, { left: 8, top: 76, arrow: 14, below: true }, 'the arrow stays clear of the rounded corner');
+assert.equal(
+  placePopover({ left: 1252, top: 40, width: 28, bottom: 68 }, { width: 320, height: 180 }, wide).arrow,
+  295,
+  'and clear of the far corner too');
+assert.equal(
+  placePopover({ left: 600, top: 40, width: 28, bottom: 68 }, { width: 320, height: 900 }, { width: 1280, height: 500 }).top,
+  8,
+  'an oversized popover pins to the top edge instead of running off screen');
 
 console.log('client self-check passed');
-
-

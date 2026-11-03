@@ -16,7 +16,7 @@ Edit and delete your own messages in [DeepSeek Harness](https://github.com/deeps
 | --- | --- |
 | Change a sent message | Click the pencil under your bubble, edit the text, then click **Save and resend**. Everything after that message is truncated and the conversation restarts from your edited text. |
 | Drop an out-of-line message | Click the trash icon and confirm. That message and every following turn are deleted. |
-| Restore files too | When deleting or editing, if that turn recorded file changes, the dialog lets you choose **messages only** or **messages and files**. |
+| Restore files too | When deleting or editing, if that turn recorded file changes, the popover lets you choose **messages only** or **messages and files**. |
 | Stay out of a running task | The action is refused while a turn is still running, so it never races the agent's writes. |
 
 Only messages you sent have these buttons. The **Copy** button is still there, in the same position.
@@ -27,13 +27,19 @@ Your own messages get **edit / delete / copy** buttons under the bubble:
 
 <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions.png" alt="Edit, delete and copy buttons under a user message" width="760">
 
-The edit dialog lists the file changes recorded after that message as soon as it opens, and the **rollback scope** decides whether files are restored too:
+The popover opens right under the button you clicked and points at it with a small arrow; click outside or press Esc to dismiss it. The editor reads the file changes recorded after that message as soon as it opens — collapsed into one **N file changes recorded** line unless you expand it — and a two-way switch decides whether files are restored too:
 
-| Edit dialog | Delete confirmation |
+| Edit popover | Delete confirmation |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog.png" alt="Edit dialog with the file list and rollback scope" width="340"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog.png" alt="Delete confirmation with the same rollback scope" width="340"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog.png" alt="Edit popover: file changes collapse to one line, rollback scope is a two-way switch" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog.png" alt="Delete confirmation: a one-line confirm when no files changed" width="360"> |
 
-Snapshot and Git-worktree limits are shown in the dialog itself, not after a failed operation.
+The popover follows its button: it flips above when there is no room below, narrows to the screen width on small viewports, and keeps the same layering in the light theme:
+
+| Flips above near the bottom | Narrow screen (390px) | Light theme |
+| :---: | :---: | :---: |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-flip.png" alt="Popover flipped above the button, arrow pointing down at it" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-narrow.png" alt="Popover narrowed to a 390px viewport" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-light.png" alt="Delete popover in the light theme" width="240"> |
+
+Snapshot and Git-worktree limits are shown in the popover itself, not after a failed operation.
 
 ## Install
 
@@ -91,14 +97,14 @@ The DSH startup log lists `message-rewind` as active. Refresh the page and your 
 
 ## Usage
 
-1. Click the pencil → the editor opens; change the text and click **Save and resend**.
+1. Click the pencil → a popover opens under the button; change the text and click **Save and resend**.
 2. Click the trash icon → click **Delete** to remove that message and every following turn.
-3. The dialog reads the file changes recorded after that message as soon as it opens, and lists them; when files changed (or the snapshots expired) it also offers a **Rollback scope**:
-   - **Roll back messages only** (default) — leave files untouched;
-   - **Roll back messages and files** — restore files to their content before that message;
+3. The popover reads the file changes recorded after that message as soon as it opens and keeps them collapsed into one line; when files changed it also offers a two-way **Rollback scope**:
+   - **Messages only** (default) — leave files untouched;
+   - **Messages + files** — restore files to their content before that message;
    - pick the scope, then click **Save and resend** or **Delete**.
 
-Either way, the dialog tells you exactly what will be lost and whether the file rollback can be refused.
+Lost snapshots, queued prompts, and non-Git workspaces are called out in one-line notes inside the popover.
 
 ## File rollback: what can and cannot be restored
 
@@ -126,7 +132,7 @@ Normally it is deleted. Only when its log directory is still held open and canno
 Attachments are stored as part of the message content, and editing only supports plain-text messages. Messages with attachments can still be deleted.
 
 **Q: The button says a turn is still running?**
-Stop the running task first. Also note that queued prompts are discarded together with the deleted record — the dialog warns you about this.
+Stop the running task first. Also note that queued prompts are discarded together with the deleted record — the popover warns you about this.
 
 **Q: I don't see the buttons.**
 Check that the plugin is enabled under **Settings → Plugins** and that you refreshed the page. Only messages you sent have these buttons.

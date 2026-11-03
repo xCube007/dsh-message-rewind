@@ -20,7 +20,7 @@ node manifest.test.js # 包元数据：engines.dsh、manifestVersion、客户端
 node rewind.test.js   # 切点 / diff 逆向数学
 node files.test.js    # 文件回滚：新建、删除、修改、无结尾换行、BOM、冲突拒绝、跨轮回卷、undo
 node index.test.js    # Host 端：会话目录定位与越权路径拒绝（purge 的前置保护）
-node client.test.js   # 客户端：用 stub React 跑主交互（渲染按钮 → 编辑 → inspect → execute → purge → 错误本地化）
+node client.test.js   # 客户端：用 stub React 跑主交互（渲染按钮 → 编辑 → inspect → execute → purge → 错误本地化），并单独验证小窗的定位数学
 ```
 
 `npm test` 会依次跑这五个文件。
@@ -38,7 +38,7 @@ node client.test.js   # 客户端：用 stub React 跑主交互（渲染按钮 �
 index.js            Host 端：路由、鉴权、inspect/execute/purge、会话 fork 与清理
 rewind.js           纯函数：切点计算、反向应用 diff、重建 diff 某一侧
 files.js            文件回滚：计划（只读校验）→ 落盘 → 失败自动撤销
-client.js           浏览器端：消息气泡 actions、确认/编辑弹窗
+client.js           浏览器端：消息气泡 actions、锚定在按钮下方的编辑/删除小窗
 locale/{zh,en}.json 插件显示名与描述
 cordis.patch.yml    bundle patch
 *.test.js           自检（node 直接跑，无测试框架依赖）
@@ -62,7 +62,8 @@ cordis.patch.yml    bundle patch
 - **purge 的删除目标必须自己证明安全**：`sessionId` 先按 `session-<uuid>` 形状校验，再用 `realpath` 把命中目录限定在 sessions root 内（只认 `root/<id>` 与 `root/<slug>/<id>` 两层），绝不把拼接结果直接交给 `fs.rm`。归档失败时直接放弃删除，避免留下“侧边栏里还在、日志已没了”的会话。
 - Host 侧的失败都带 `rewindCode`，客户端按 code 查 zh/en 字典，拿不到词条才回退到 Host 的原文。
 - UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`）：气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，图标/剪切板兜底是插件自己的 `dmr-` 前缀实现，不再 require `@deepseek-ai/dsh-client-ui-primitives`（官方 practices 明确不要依赖 Client 包）。
-- 对话弹窗只允许在 `loading` 阶段取消；inspect/execute 都带 30s 超时，过期的响应按 token 丢弃，不会把已关闭的弹窗重新拉起来。
+- 编辑/删除不是居中弹窗，而是锚定在**点击的那个按钮下方**的小窗：`popover-geometry` 区域是纯函数（`placePopover`），下方放不下就翻到上方，左右和箭头都被夹在视口内；`client.test.js` 按 `#region` 标记把这段源码抠出来直接跑，所以改定位逻辑要保留那两行标记。
+- 小窗只在组件挂载时测一次位置：用 `ResizeObserver`、`scroll`（捕获）和 `resize` 跟随，不靠定时器；点窗外、按 Esc 关闭（`loading` 阶段允许取消，读取/写入进行中不放弃）。`inspect`/`execute` 都带 30s 超时，过期的响应按 token 丢弃，不会把已关闭的小窗重新拉起来。
 
 ## 发布到 npm
 
