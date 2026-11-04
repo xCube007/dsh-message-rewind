@@ -66,6 +66,19 @@ export function terminated(text) {
 }
 
 /**
+ * One hunk line's body with its terminating newline. The recorder's jsdiff
+ * output drops the newline from every hunk line, so an empty body means one
+ * blank line rather than no line; older fixtures keep the newline. Both shapes
+ * must read as exactly one line ending.
+ * @param body - the text after the leading marker.
+ * @returns the body with one terminating newline.
+ */
+function lineText(body) {
+  if (body === '') return '\n';
+  return body.endsWith('\n') ? body : `${body}\n`;
+}
+
+/**
  * Undo one recorded diff against the current text.
  * A hunk carries only changed and context lines; unrelated trailing lines are retained.
  * @param current - the file's current text.
@@ -84,7 +97,7 @@ export function inversePatch(current, hunks) {
     cursor = start;
     for (const line of hunk.lines) {
       const marker = line[0];
-      const body = terminated(line.slice(1));
+      const body = lineText(line.slice(1));
       if (marker === '\\') throw userError('unsupported-diff', '无结尾换行的文件差异暂不支持，未回滚任何文件。');
       if (marker === '+') {
         if (lines[cursor] !== body) throw userError('file-changed', '文件版本已改变，未回滚任何文件。');
@@ -115,7 +128,7 @@ export function textSide(exists, hunks, after) {
   for (const hunk of hunks) {
     for (const line of hunk.lines) {
       const wanted = after ? line[0] !== '-' : line[0] !== '+';
-      if (wanted && line[0] !== '\\') lines.push(terminated(line.slice(1)));
+      if (wanted && line[0] !== '\\') lines.push(lineText(line.slice(1)));
     }
   }
   if (!exists) {

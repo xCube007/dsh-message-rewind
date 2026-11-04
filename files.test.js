@@ -1,8 +1,9 @@
 /**
  * File-rewind self-check against a real temporary directory. The recorded
  * diffs are handcrafted to match what `dsh-workspace-changes` produces: it diffs
- * newline-terminated text with jsdiff, so every hunk line carries its `\n`, and a
- * deletion is `before: true, after: false`.
+ * newline-terminated text with jsdiff but hands back every hunk line without its
+ * newline — an empty body is one blank line — and a deletion is
+ * `before: true, after: false`.
  */
 import assert from 'node:assert/strict';
 import { promises as fsp } from 'node:fs';
@@ -47,6 +48,26 @@ await check('created file is removed', async () => {
   assert.deepEqual([...targets.values()][0].original, { exists: false, text: null });
   await applyRewind(targets);
   await assert.rejects(() => fsp.stat(abs(createdName)));
+});
+
+// --- the recorder's hunk lines carry no newline; a blank line is one line ---
+const blankCreatedName = 'blank-created.txt';
+const blankCreatedDiff = textDiff(blankCreatedName, false, true, [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: 3, lines: ['+a', '+', '+b'] }]);
+await check('created file with a blank line is removed', async () => {
+  await fsp.writeFile(abs(blankCreatedName), 'a\n\nb\n', 'utf8');
+  const targets = await planRewind(readDiffFrom({ '13:0': blankCreatedDiff }), recordsFor([{ seq: 13, files: [{ path: blankCreatedName, display: blankCreatedName }] }]));
+  assert.deepEqual([...targets.values()][0].original, { exists: false, text: null });
+  await applyRewind(targets);
+  await assert.rejects(() => fsp.stat(abs(blankCreatedName)));
+});
+
+const blankEditedName = 'blank-edited.txt';
+const blankEditedDiff = textDiff(blankEditedName, true, true, [{ oldStart: 1, oldLines: 4, newStart: 1, newLines: 4, lines: [' a', ' ', '-b', '+B', ' c'] }]);
+await check('blank context line still inverts a modification', async () => {
+  await fsp.writeFile(abs(blankEditedName), 'a\n\nB\nc\n', 'utf8');
+  const targets = await planRewind(readDiffFrom({ '14:0': blankEditedDiff }), recordsFor([{ seq: 14, files: [{ path: blankEditedName, display: blankEditedName }] }]));
+  await applyRewind(targets);
+  assert.equal(await fsp.readFile(abs(blankEditedName), 'utf8'), 'a\n\nb\nc\n');
 });
 
 // --- a turn that modified a file is reverted -------------------------------

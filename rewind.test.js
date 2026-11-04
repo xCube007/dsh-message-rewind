@@ -72,5 +72,18 @@ assert.equal(terminated(''), '');
 assert.equal(inversePatch('abc', [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, lines: ['+abc'] }]), '');
 const unterminated = [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 2, lines: [' x\n', '+y'] }];
 assert.equal(inversePatch('x\ny', unterminated), 'x\n');
+// The recorder's jsdiff output strips the newline from every hunk line, and an
+// empty body is one blank line rather than no line; both shapes must invert.
+const stripped = [{ oldStart: 1, oldLines: 4, newStart: 1, newLines: 4, lines: [' a', ' ', '-b', '+B', ' c'] }];
+assert.equal(textSide(true, stripped, true), 'a\n\nB\nc\n');
+assert.equal(textSide(true, stripped, false), 'a\n\nb\nc\n');
+assert.equal(inversePatch('a\n\nB\nc\n', stripped), 'a\n\nb\nc\n');
+const insertedBlank = [{ oldStart: 1, oldLines: 4, newStart: 1, newLines: 5, lines: [' a', ' ', ' b', '+', ' c'] }];
+assert.equal(textSide(true, insertedBlank, true), 'a\n\nb\n\nc\n');
+assert.equal(inversePatch('a\n\nb\n\nc\n', insertedBlank), 'a\n\nb\nc\n');
+const createdBlank = [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: 3, lines: ['+a', '+', '+b'] }];
+assert.equal(textSide(true, createdBlank, true), 'a\n\nb\n');
+assert.equal(textSide(false, createdBlank, false), null);
+
 console.log('rewind self-check passed');
 
