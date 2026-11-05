@@ -27,19 +27,19 @@
 
 自己发出的消息，气泡下方会多出「编辑 / 删除 / 复制」三个按钮：
 
-<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/message-actions.png" alt="消息气泡下方的编辑、删除、复制按钮" width="760">
+<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.2.1.png" alt="消息气泡下方的编辑、删除、复制按钮" width="760">
 
 点铅笔或垃圾桶之后，小窗直接出现在那个按钮正下方，并用一个小箭头指向它；点窗外或按 Esc 就收起。编辑窗一打开就会读出这条消息之后记录到的文件改动，默认只显示一行「已记录 N 处文件改动」，展开才看具体路径；要不要连文件一起还原，用一个二选一的开关决定：
 
 | 编辑小窗 | 删除确认 |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/edit-dialog.png" alt="编辑小窗：文件改动收起成一行，回滚范围二选一" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/delete-dialog.png" alt="删除确认：没有文件改动时只剩一行确认" width="360"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog-v1.2.1.png" alt="编辑小窗：文件改动收起成一行，回滚范围二选一" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog-v1.2.1.png" alt="删除确认：没有文件改动时只剩一行确认" width="360"> |
 
 小窗跟着按钮走：窗口底部放不下时自动翻到按钮上方，窄屏下收窄到屏幕宽度，亮色主题也保持同一套层级：
 
 | 靠近底部时翻到上方 | 窄屏（390px） | 亮色主题 |
 | :---: | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/popover-flip.png" alt="小窗翻到按钮上方，箭头朝下指向按钮" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/popover-narrow.png" alt="窄屏下小窗收窄到屏幕宽度" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/v1.2.0/img/popover-light.png" alt="亮色主题下的删除小窗" width="240"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-flip-v1.2.1.png" alt="小窗翻到按钮上方，箭头朝下指向按钮" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-narrow-v1.2.1.png" alt="窄屏下小窗收窄到屏幕宽度" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-light-v1.2.1.png" alt="亮色主题下的删除小窗" width="240"> |
 
 快照失效、工作区不在 Git 仓库等限制也会直接标在小窗里，不用等到操作失败才知道。
 

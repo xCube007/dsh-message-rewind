@@ -115,11 +115,11 @@ gh release create v<version> --title "dsh-message-rewind v<version>" --notes-fro
 
 ### README 截图
 
-README 里的截图用 **tag 固定地址** `https://raw.githubusercontent.com/xCube007/dsh-message-rewind/vX.Y.Z/img/...`，不要用 `main`：raw CDN 对同名路径缓存很久（加 `?v=` 查询参数也不会失效），指 `main` 时改完图读者仍会看到旧图。改图或发版时把 URL 里的 tag 换成新版本，并逐个确认返回 200、大小与本地一致。
+README 里的截图文件名**必须唯一**（带版本后缀，如 `img/edit-dialog-v1.2.1.png`），README 和 `screenshots.json` 都引用同一个名字、URL 用 `main`：raw CDN 对同名路径缓存很久（加 `?v=` 查询参数也不会失效），只要不再同名覆盖，`main` 路径就是稳定的。**每次换图都要换文件名**，并逐个确认返回 200、大小与本地一致。
 
 ## 插件市场（awesome-dsh-plugin）
 条目已收录：`data/plugins/xCube007__dsh-message-rewind.yml`（awesome-dsh-plugin 仓库，2026-10-30 合并）。三类更新方式不同：
 
 - **版本号 / 安装命令 / capabilities**：自动。市场每晚 02:23 UTC 构建时 probe npm 的 `dist-tags.latest`，npm 发了版，卡片和详情页自己会变；安装命令会显示成 `dsh plugin --profile web add dsh-message-rewind`。
-- **截图**：自动。改本仓库根目录的 `screenshots.json` 并推送即可，市场构建时从作者仓库解析，不用提 PR。
+- **截图**：自动。市场只认本仓库根目录 `screenshots.json` 里列出的文件（构建时转成 `raw.githubusercontent.com/.../HEAD/img/...`），改完推送即可，不用提 PR；新增的图必须加进这个清单才会展示。
 - **描述 / 分类 / icon / tarball 链接**：要 PR。只改 `data/plugins/xCube007__dsh-message-rewind.yml` 那一条；市场那边的两个 README 是生成物，禁止手改。
