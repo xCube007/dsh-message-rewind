@@ -98,15 +98,17 @@ const makeContext = (overrides = {}) => ({
     archiveSession: async ({ sessionId }) => { routeCalls.push(['archive', sessionId]); },
   },
   workspaceChanges: { summary: () => undefined, diff: async () => undefined },
-  sessionController: {
-    inspect: async () => ({
-      meta: { cwd: 'D:/tmp', agentPreset: 'preset-a' },
+  sessionQuery: {
+    readSession: async () => ({
+      session: { id: 'session-source', cwd: 'D:/tmp', agentPreset: 'preset-a' },
       events: [
         { seq: 0, type: 'turn/start', data: { turn: 1 } },
         { seq: 1, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'hi' }] } },
         { seq: 2, type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } },
       ],
     }),
+  },
+  sessionController: {
     fork: async () => ({ sessionId: 'session-child' }),
     create: async (request) => { routeCalls.push(['create', request]); return { sessionId: 'session-child' }; },
     prompt: async () => ({ accepted: true }),
@@ -175,22 +177,33 @@ await check('execute binds the replacement to the source workspace', async () =>
 
 await check('an open turn is refused with a localizable code', async () => {
   const context = makeContext({
-    sessionController: {
-      inspect: async () => ({
-        meta: { cwd: 'D:/tmp' },
+    sessionQuery: {
+      readSession: async () => ({
+        session: { id: 'session-source', cwd: 'D:/tmp' },
         events: [
           { seq: 0, type: 'turn/start', data: { turn: 1 } },
           { seq: 1, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'hi' }] } },
         ],
       }),
-      fork: async () => ({ sessionId: 'session-child' }),
-      create: async () => ({ sessionId: 'session-child' }),
-      prompt: async () => ({ accepted: true }),
     },
   });
   apply(context);
   const { envelope } = await rpc(registrations.at(-1).handler, 'execute', { sessionId: 'session-source', seq: 1, action: 'delete', rewindFiles: false });
   assert.equal(envelope.result.error.details.rewindCode, 'open-turn');
+});
+
+await check('a deleted session is reported with a localizable code', async () => {
+  const context = makeContext({
+    sessionQuery: {
+      readSession: async () => {
+        throw Object.assign(new Error('session "session-source" not found'), { code: 'SESSION_QUERY_SESSION_NOT_FOUND' });
+      },
+    },
+  });
+  apply(context);
+  const { envelope } = await rpc(registrations.at(-1).handler, 'inspect', { sessionId: 'session-source', seq: 1 });
+  assert.equal(envelope.result.ok, false);
+  assert.equal(envelope.result.error.details.rewindCode, 'missing-session');
 });
 
 await check('purge reports a failed archive instead of deleting', async () => {

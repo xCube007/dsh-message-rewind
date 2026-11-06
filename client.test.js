@@ -72,6 +72,7 @@ Object.defineProperty(globalThis, 'navigator', { value: { clipboard: { writeText
 // The Host's `inspect` answer; the dialog tests below change it to exercise the
 // recorded-file and lost-snapshot branches.
 let inspectResult = { files: [], incomplete: false, unfinished: false };
+const knownSessions = {};
 const ctx = {
   effect: (fn) => { fn(); return () => {}; },
   locale: {
@@ -92,16 +93,36 @@ const ctx = {
     },
   },
   uiWorkspace: {
-    openSession: (id) => calls.push(['openSession', id]),
+    // 0.2.2 refuses a Session the Client catalog does not know.
+    openSession: (id) => {
+      if (knownSessions[id] === undefined) throw new Error(`sessions.retain: unknown session ${id}`);
+      calls.push(['openSession', id]);
+    },
+  },
+  sessions: {
+    list: { getSnapshot: () => ({ byId: knownSessions }) },
+    refresh: () => { calls.push(['sessions.refresh']); knownSessions['child-1'] = { sessionId: 'child-1' }; return Promise.resolve(); },
   },
   slots: {
     inject: (name, callback) => { callback(); return () => {}; },
-    register: (options, component) => { registrations.push({ options, component }); return () => {}; },
+    // 0.2.2 rejects a second keyed entry at the same priority; a lower one shadows.
+    register: (options, component) => {
+      const clash = registrations.some((entry) => entry.options.name === options.name
+        && entry.options.key !== undefined
+        && entry.options.key === options.key
+        && (entry.options.priority ?? 0) === (options.priority ?? 0));
+      if (clash) throw new Error(`keyed slot "${options.name}" already has an entry for key "${options.key}" at priority ${options.priority ?? 0}`);
+      registrations.push({ options, component });
+      return () => {};
+    },
   },
 };
 
 const originalError = globalThis.console.error;
 globalThis.console.error = (...args) => { throw args[0]; };
+// The shipped Chat plugin owns the same keyed seat at the default priority; a
+// same-priority second registration is what 0.2.2 refuses.
+registrations.push({ options: { name: 'conversation.chat.node', key: 'user', locale: '@deepseek-ai/dsh-client-ui-chat' }, component: () => null });
 new Function('window', source)(globalThis.window);
 const definition = globalThis.__definition;
 assert.equal(definition.id, 'dsh-message-rewind');
@@ -110,15 +131,16 @@ const plugin = definition.factory((id) => {
   throw new Error(`unexpected require: ${id}`);
 });
 assert.equal(plugin.name, 'dsh-message-rewind');
-assert.deepEqual(plugin.inject, ['slots', 'uiWorkspace', 'locale', 'connection']);
+assert.deepEqual(plugin.inject, ['slots', 'uiWorkspace', 'locale', 'connection', 'sessions']);
 plugin.apply(ctx);
 globalThis.console.error = originalError;
 
 assert.equal(styleTags.length, 1, 'one stylesheet is inserted');
 assert.deepEqual(calls.filter((call) => call[0] === 'locale.register').map((call) => call[2]), ['zh', 'en']);
-const nodeRegistration = registrations.find((entry) => entry.options.key === 'user');
+const nodeRegistration = registrations.find((entry) => entry.options.key === 'user' && entry.options.priority === -1);
 const overlayRegistration = registrations.find((entry) => entry.options.id === 'message-rewind.dialog');
 assert.ok(nodeRegistration, 'the user chat node renderer is registered');
+assert.equal(nodeRegistration.options.priority, -1, 'a lower priority shadows the shipped user row instead of colliding with it');
 assert.ok(overlayRegistration, 'the overlay dialog is registered');
 
 // --- render the user message row -------------------------------------------
@@ -220,6 +242,9 @@ footer().children.filter(Boolean).at(-1).props.onClick();
 await tick();
 assert.ok(!renderDialog(), 'a clean edit closes the popover after forking');
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession'), [['openSession', 'child-1']], 'the branch is opened');
+const openedAt = calls.findIndex((call) => call[0] === 'openSession');
+const refreshedAt = calls.findIndex((call) => call[0] === 'sessions.refresh');
+assert.ok(refreshedAt !== -1 && refreshedAt < openedAt, 'the fresh child is pulled into the client catalog before it is opened');
 await new Promise((resolve) => setTimeout(resolve, 400));
 const purged = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'purge').at(-1);
 assert.deepEqual(purged[3], { sessionId: 'session-1' }, 'the untouched source is retired');

@@ -42,7 +42,7 @@
   ],
   "engines": {
     "node": ">=20",
-    "dsh": ">=0.2.1-rc.3 <0.3.0-0"
+    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
   },
   "scripts": {
     "test": "node manifest.test.js && node rewind.test.js && node files.test.js && node index.test.js && node client.test.js",

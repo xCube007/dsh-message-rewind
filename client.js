@@ -43,6 +43,7 @@ window.__ModuleLoader__.load({
       'error.incomplete-snapshot': '部分文件改动快照已不可用，只能只回滚消息。',
       'error.no-workspace': '这个会话没有工作区，只能只回滚消息。',
       'error.invalid-session': '会话标识无效。',
+      'error.missing-session': '找不到这个会话，它可能已被删除。',
       'error.unknown-endpoint': '未知接口。',
       'error.request-too-large': '请求体过大。',
       'error.bad-request': '请求格式无效。',
@@ -85,6 +86,7 @@ window.__ModuleLoader__.load({
       'error.incomplete-snapshot': 'Some file snapshots are unavailable; roll back messages only.',
       'error.no-workspace': 'This conversation has no workspace; roll back messages only.',
       'error.invalid-session': 'Invalid session id.',
+      'error.missing-session': 'This conversation no longer exists.',
       'error.unknown-endpoint': 'Unknown endpoint.',
       'error.request-too-large': 'The request body is too large.',
       'error.bad-request': 'Invalid request.',
@@ -323,7 +325,7 @@ window.__ModuleLoader__.load({
 
     return {
       name: 'dsh-message-rewind',
-      inject: ['slots', 'uiWorkspace', 'locale', 'connection'],
+      inject: ['slots', 'uiWorkspace', 'locale', 'connection', 'sessions'],
       apply(ctx) {
         try {
           install(ctx);
@@ -402,6 +404,26 @@ window.__ModuleLoader__.load({
         // belongs to, so a closed or replaced dialog is never resurrected.
         const patchIf = (token, fields) => { if (current !== null && current.token === token) publish({ ...current, ...fields }); };
 
+        // 0.2.2 only opens a Session its Client catalog knows. A child the Host
+        // creates over RPC enters that catalog through a forwarded
+        // Session-added frame that races this reply, so pull the Session list
+        // (a refresh) until the row lands before navigating; otherwise
+        // `openSession` throws and strands the user on the source conversation.
+        async function openCreated(sessionId) {
+          const catalogued = () => {
+            try {
+              return ctx.sessions.list.getSnapshot().byId[sessionId] !== undefined;
+            } catch {
+              return false;
+            }
+          };
+          for (let attempt = 0; attempt < 10 && !catalogued(); attempt += 1) {
+            if (attempt > 0) await new Promise((resolveDelay) => window.setTimeout(resolveDelay, 100));
+            await ctx.sessions.refresh().catch(() => {});
+          }
+          ctx.uiWorkspace.openSession(sessionId);
+        }
+
         async function execute(rewindFiles) {
           const request = current;
           if (!request || request.busy) return;
@@ -420,7 +442,13 @@ window.__ModuleLoader__.load({
             publish(null);
             // Navigate first so the source's client reference is released, then let
             // the host retire its log: the sidebar keeps exactly one conversation.
-            ctx.uiWorkspace.openSession(result.sessionId);
+            try {
+              await openCreated(result.sessionId);
+            } catch (error) {
+              // The rollback happened; never retire the source the UI still shows.
+              console.warn('[message-rewind] the new conversation could not be opened:', error instanceof Error ? error.message : String(error));
+              return;
+            }
             const source = result.sourceSessionId;
             if (typeof source === 'string' && source !== result.sessionId) {
               Promise.resolve()
@@ -643,7 +671,7 @@ window.__ModuleLoader__.load({
                 () => copyText())));
         }
 
-        ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'user', locale: NS }, UserActions));
+        ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'user', priority: -1, locale: NS }, UserActions));
         ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'message-rewind.dialog', locale: NS }, RewindDialog));
       }
     };

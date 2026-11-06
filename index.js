@@ -13,7 +13,7 @@ const SESSIONS_ROOT = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'ses
 /** The harness mints `session-<uuid>`; refuse anything that could address a path. */
 const SESSION_ID = /^session-[0-9a-zA-Z]+(?:-[0-9a-zA-Z]+)*$/;
 
-export const inject = ['sessionController', 'workspaceChanges', 'workspaceController', 'connection', 'webServer'];
+export const inject = ['sessionController', 'sessionQuery', 'workspaceChanges', 'workspaceController', 'connection', 'webServer'];
 
 const text = (error) => (error instanceof Error ? error.message : String(error));
 
@@ -112,8 +112,26 @@ export function apply(ctx) {
     return diff;
   }
 
+  /**
+   * Read one session's recorded events and creation metadata without activating
+   * it. DSH 0.2.2 replaced `sessionController.inspect` with the cold-safe
+   * `sessionQuery.readSession`, whose `session` field is the Session header.
+   * @param sessionId - session whose durable log is read.
+   * @returns the full event log and the metadata the cut needs.
+   */
+  async function readInspection(sessionId) {
+    let read;
+    try {
+      read = await ctx.sessionQuery.readSession(sessionId);
+    } catch (error) {
+      if (error?.code === 'SESSION_QUERY_SESSION_NOT_FOUND') throw userError('missing-session', '找不到这个会话，它可能已被删除。');
+      throw error;
+    }
+    return { events: read.events, meta: { cwd: read.session.cwd, agentPreset: read.session.agentPreset } };
+  }
+
   async function load(sessionId, seq) {
-    const inspection = await ctx.sessionController.inspect(sessionId);
+    const inspection = await readInspection(sessionId);
     const cut = prepareCut(inspection.events, seq);
     const records = cut.records.map((recordSeq) => ({
       seq: recordSeq,

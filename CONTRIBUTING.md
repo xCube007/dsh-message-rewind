@@ -28,7 +28,10 @@ node client.test.js   # 客户端：用 stub React 跑主交互（渲染按钮 �
 ## DSH 版本兼容
 
 - `package.json` 的 `engines.dsh` 是宿主**加载前**的硬门槛（`@deepseek-ai/dsh-app-boot` 的 `evaluatePluginCompatibility`，语义是 `semver.satisfies(..., { includePrerelease: true })`）：范围不匹配时整个 bundle 被拒绝加载，不是只坏一个功能。
-- 当前声明 `>=0.2.1-rc.3 <0.3.0-0`：0.2.1-rc.3 上开发，0.2.1-rc.5 实测通过（Host 侧的 `/message-rewind` 路由正常注册；客户端用到的 `conversation.chat.node`、`conversation.chat.user.content`、`shell.overlay` 槽位与 `sessionId` / `useSession` / `renderFactorySlot` 标准 props 在 rc.5 的槽位契约里都存在）。`<0.3.0-0` 挡住 0.3 的预发布版本，避免没验证就放行。
+- 当前声明 `>=0.2.2-rc.1 <0.3.0-0`：0.2.1 系列上开发，0.2.2-rc.1 实测通过（0.2.2 移除了 Host 的 `sessionController.inspect`，改用 `ctx.sessionQuery.readSession` 读取会话事件与 header；Host 侧的 `/message-rewind` 路由正常注册；客户端用到的 `conversation.chat.node`、`conversation.chat.user.content`、`shell.overlay` 槽位与 `sessionId` / `useSession` / `renderFactorySlot` 标准 props 在 0.2.2-rc.1 的槽位契约里都存在）。`<0.3.0-0` 挡住 0.3 的预发布版本，避免没验证就放行。
+- 0.2.2 客户端另有两个契约变化（都已在 `client.js` 适配）：
+  - keyed 槽位同优先级重复注册会直接抛错（`keyed slot "conversation.chat.node" already has an entry for key "user" at priority 0`），覆盖官方行必须换一个更低的 `priority`——插件用 `priority: -1` 明确覆盖官方 user 行，不再祈祷注册顺序。
+  - `ctx.uiWorkspace.openSession(id)` 只打开客户端会话目录里已知的会话；Host 通过 RPC 新建的子会话只经 `api-session/added` 广播异步进入目录，存在竞态。所以 `execute` 成功后先用 `ctx.sessions.refresh()` 把子会话拉进目录，再 `openSession`（失败则保留源会话、不执行 purge）。
 - 升级 DSH 并验证后，同步改这个范围、`README*` 的安装要求，以及 `manifest.test.js` 里的正则。
 - `client.js` 里 `window.__ModuleLoader__.load({ id })` 必须等于包名，否则该 client entry 永远 pending、web boot 失败；`manifest.test.js` 会拦住不一致。
 

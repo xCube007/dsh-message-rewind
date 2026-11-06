@@ -11,8 +11,8 @@ const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url)
 
 assert.equal(pkg.name, 'dsh-message-rewind');
 assert.match(pkg.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
-// Bounded to the tested DSH release line: rc.3 through 0.2.x, never 0.3.
-assert.match(pkg.engines?.dsh ?? '', /^>=0\.2\.1-rc\.\d+ <0\.3\.0-0$/);
+// Bounded to the tested DSH release line: 0.2.2-rc.1 through 0.2.x, never 0.3.
+assert.match(pkg.engines?.dsh ?? '', /^>=0\.2\.2-rc\.\d+ <0\.3\.0-0$/);
 assert.equal(pkg.engines?.node, '>=20');
 assert.equal(pkg.dsh?.manifestVersion, 1);
 assert.equal(pkg.dsh?.bundle?.patch, './cordis.patch.yml');
