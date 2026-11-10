@@ -1,0 +1,27 @@
+name: index-sync
+
+# The Open Plugin Market follows the npm `latest` tag and rebuilds every six
+# hours, so releases need nothing pushed to its index repository. This workflow
+# only watches for the listing going stale (a failing per-package check, or the
+# entry being withdrawn) and keeps one issue for it in this repository.
+on:
+  schedule:
+    - cron: '17 0,6,12,18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/index-sync.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
