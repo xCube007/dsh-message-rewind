@@ -259,43 +259,123 @@ export function apply(ctx) {
   }
 
   /**
+   * Detach one live source Session. The store's disposal event closes its
+   * persistence writer and makes the harness publish `api-session/removed`, so
+   * the log can be deleted after the write handle is gone.
+   * @param sessionId - session to detach.
+   * @returns true when a live session was detached, false when it was cold.
+   * @throws when a live session is still attached afterwards.
+   */
+  async function detachSession(sessionId) {
+    const sessions = ctx.get('sessions');
+    const live = sessions?.get?.(sessionId);
+    if (live === undefined) return false;
+    // Archive used to stop queued work before hiding the session; keep that
+    // stop without writing an archive entry.
+    try { await ctx.parallel?.('workspace/session-stop', { sessionId }); } catch { /* stop is best effort */ }
+    try { await sessions.flush?.(live); } catch { /* the log is about to be deleted */ }
+    try {
+      const entry = sessions.liveEntryFor?.(live);
+      if (entry !== undefined) sessions.detachEntered?.(entry);
+    } catch (error) {
+      throw new Error(`会话仍在本进程中运行，无法移除：${text(error)}`);
+    }
+    if (sessions.get?.(sessionId) !== undefined) throw new Error('会话仍在本进程中运行，无法移除。');
+    return true;
+  }
+
+  /**
+   * Drop the traces a deleted source session leaves outside its log: the
+   * archived/pinned registry flags, workspace accounting, and projection cache.
+   * @param sessionId - deleted session.
+   * @param detachedLive - whether {@link detachSession} already published its removal.
+   */
+  async function cleanupSession(sessionId, detachedLive) {
+    if (!detachedLive) {
+      try { ctx.emit?.('api-session/removed', sessionId); } catch { /* client refresh is the fallback */ }
+    }
+    const registry = ctx.get('workspaceRegistry');
+    try {
+      if (registry?.archivedSessionIds?.includes?.(sessionId) === true) {
+        await ctx.workspaceController.unarchiveSession({ sessionId });
+      }
+    } catch {
+      /* a stale archive id is cleaned up by the harness/archive surfaces */
+    }
+    try {
+      if (registry?.pinnedSessionIds?.includes?.(sessionId) === true) {
+        await ctx.workspaceController.unpinSession({ sessionId });
+      }
+    } catch {
+      /* a stale pin never renders a row without a session */
+    }
+    try {
+      const table = ctx.get('sessionProjectionCache')?.requireTable?.();
+      if (table !== undefined) await table.delete(sessionId);
+    } catch {
+      /* the projection cache is a fold shortcut, not an authority */
+    }
+    try {
+      for (const workspace of registry?.list?.() ?? []) {
+        if (typeof workspace.detachSession === 'function') await workspace.detachSession(sessionId);
+      }
+    } catch {
+      /* stale accounting never shows a row without a live or persisted session */
+    }
+  }
+
+  /**
    * Remove a rolled-back source session for good. The harness keeps session logs
-   * append-only and offers no delete API, so this retires the artifact instead:
-   * archive it out of the sidebar, delete its directory, and report whether the
-   * bytes are gone.
-   *
-   * The archive only cancels the running turn — the Agent stays in the session
-   * store for this Host's lifetime — so waiting for `sessions.get()` to clear
-   * would never finish. Deletion is attempted directly and its outcome is
-   * reported, with liveness used only to explain a failure.
+   * append-only and offers no delete API, so this retires the artifact itself:
+   * detach the live Session, delete its directory, and drop its archive flag /
+   * workspace accounting / projection cache. The normal path never archives, so
+   * repeated rewinds cannot fill the archive with copies of one conversation.
    */
   async function purge(sessionId) {
-    try {
-      await ctx.workspaceController.archiveSession({ sessionId, stopActivity: true });
-    } catch (error) {
-      // Without the archive the session would stay visible after its log is gone.
-      return { removed: false, archivedOnly: false, message: `会话归档失败，未删除任何内容：${text(error)}` };
-    }
     const directory = await sessionDirectory(SESSIONS_ROOT, sessionId);
-    if (directory === undefined) return { removed: false, archivedOnly: false, message: '未找到会话日志目录，未删除任何内容。' };
-    const live = ctx.get('sessions')?.get(sessionId) !== undefined;
+    let detachedLive = false;
+    if (directory === undefined) {
+      // A log another surface already removed still needs its row cleaned up.
+      try { detachedLive = await detachSession(sessionId); } catch { /* remove the row below */ }
+      await cleanupSession(sessionId, detachedLive);
+      return { removed: false, archivedOnly: false, message: '未找到会话日志目录，未删除任何内容。' };
+    }
+    if (ctx.get('sessions')?.get?.(sessionId) !== undefined) {
+      try {
+        detachedLive = await detachSession(sessionId);
+      } catch (error) {
+        // Leaving a live session with its log is better than deleting the log
+        // out from under it; hide the row with the old archive fallback.
+        try {
+          await ctx.workspaceController.archiveSession({ sessionId, stopActivity: true });
+          return { removed: false, archivedOnly: true, message: `${text(error)}，已移出侧边栏` };
+        } catch (archiveError) {
+          return { removed: false, archivedOnly: false, message: `${text(error)}；${text(archiveError)}` };
+        }
+      }
+    }
     let failure;
     for (let attempt = 0; attempt < 6; attempt += 1) {
       try {
         await fsp.rm(directory, { recursive: true, force: true });
-        return { removed: true, archivedOnly: false };
+        failure = undefined;
+        break;
       } catch (error) {
         failure = error;
         await delay(250);
       }
     }
-    return {
-      removed: false,
-      archivedOnly: true,
-      message: live
-        ? `会话仍在本进程中运行，日志目录无法删除，已移出侧边栏：${text(failure)}`
-        : `日志目录无法删除，已移出侧边栏：${text(failure)}`,
-    };
+    if (failure !== undefined) {
+      // Keep the old fallback only when the bytes could not be removed.
+      try {
+        await ctx.workspaceController.archiveSession({ sessionId, stopActivity: true });
+        return { removed: false, archivedOnly: true, message: `日志目录无法删除，已移出侧边栏：${text(failure)}` };
+      } catch (archiveError) {
+        return { removed: false, archivedOnly: false, message: `日志目录无法删除，且未能移出侧边栏：${text(failure)}；${text(archiveError)}` };
+      }
+    }
+    await cleanupSession(sessionId, detachedLive);
+    return { removed: true, archivedOnly: false };
   }
 
   async function dispatch(endpoint, payload) {

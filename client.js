@@ -457,7 +457,7 @@ window.__ModuleLoader__.load({
                 .then(() => new Promise((resolveDelay) => window.setTimeout(resolveDelay, 200)))
                 .then(() => remote('purge', { sessionId: source }, typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(REQUEST_TIMEOUT) : undefined))
                 .then((outcome) => {
-                  if (!outcome || outcome.removed !== true) console.warn('[message-rewind] source session kept in archive:', outcome?.message ?? 'log not deleted');
+                  if (!outcome || outcome.removed !== true) console.warn('[message-rewind] source session not fully removed:', outcome?.message ?? 'log not deleted');
                 })
                 .catch((error) => { console.warn('[message-rewind] purge failed:', error instanceof Error ? error.message : String(error)); });
             }

@@ -55,14 +55,14 @@ cordis.patch.yml    bundle patch
 - 日志格式里唯一能「少掉一段历史」的表达是 `surfaceOp: { op: 'replace', start, end }`，但携带该 op 的事件本身会被渲染 —— 只能「替换成另一条消息」，不能「替换成空」。
 - 因此能截断历史的原语只有 `sessionController.fork({ atSeq })`。
 
-所以插件的做法是：fork 出截断后的分支 → 打开它 → 把原会话归档（并尽力删除其日志目录），让侧边栏始终只有一条同名对话。代价是底层 SessionId 会变；原记录通常被删除，只有日志目录被占用删不掉时才留在归档里可恢复。
+所以插件的做法是：fork 出截断后的分支 → 打开它 → 直接删除原会话（先把运行中的原会话摘掉，再删日志目录并清理记账，不写归档），让侧边栏始终只有一条同名对话。代价是底层 SessionId 会变；原记录通常被删除，只有运行中的原会话摘不掉或日志目录删不掉时才会退回归档兜底。
 
 ## 实现要点
 
 - **通信不走自定义 Typert Remote**：第三方插件声明自定义命名空间不会自动生成远端绑定，客户端会一直 `pending`，把 web boot 拖死。
 - **也不走 `connection.rpc.handle()`**：Cordis 的服务代理只在**方法调用**时把 `this.ctx` 绑到调用方上下文，而 `connection.rpc` 是 getter，闭包里捕获的是 connection 插件自己的 ctx —— 它没有 `inject: webServer`，注册时会抛 `cannot get property "webServer" without inject`。
 - 最终做法：`ctx.webServer.register({ kind: 'prefix', path: '/message-rewind' })` 自建路由，手写 `client-request` / `server-response` 信封，鉴权复用 `ctx.connection.admit(request)`；客户端用官方的 `ctx.connection.rpc.call(channel, endpoint, payload)` 调用，两端信封天然对齐。
-- **purge 的删除目标必须自己证明安全**：`sessionId` 先按 `session-<uuid>` 形状校验，再用 `realpath` 把命中目录限定在 sessions root 内（只认 `root/<id>` 与 `root/<slug>/<id>` 两层），绝不把拼接结果直接交给 `fs.rm`。归档失败时直接放弃删除，避免留下“侧边栏里还在、日志已没了”的会话。
+- **purge 的删除目标必须自己证明安全**：`sessionId` 先按 `session-<uuid>` 形状校验，再用 `realpath` 把命中目录限定在 sessions root 内（只认 `root/<id>` 与 `root/<slug>/<id>` 两层），绝不把拼接结果直接交给 `fs.rm`。运行中的原会话摘不掉或日志目录删除失败时，退回旧的归档兜底，避免留下“侧边栏里还在、日志已没了”的会话。
 - Host 侧的失败都带 `rewindCode`，客户端按 code 查 zh/en 字典，拿不到词条才回退到 Host 的原文。
 - UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`）：气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，图标/剪切板兜底是插件自己的 `dmr-` 前缀实现，不再 require `@deepseek-ai/dsh-client-ui-primitives`（官方 practices 明确不要依赖 Client 包）。
 - 编辑/删除不是居中弹窗，而是锚定在**点击的那个按钮下方**的小窗：`popover-geometry` 区域是纯函数（`placePopover`），下方放不下就翻到上方，左右和箭头都被夹在视口内；`client.test.js` 按 `#region` 标记把这段源码抠出来直接跑，所以改定位逻辑要保留那两行标记。

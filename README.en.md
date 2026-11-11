@@ -125,10 +125,10 @@ Lost or truncated snapshots, queued prompts, and non-Git workspaces are called o
 ## FAQ
 
 **Q: Does the sidebar get an extra conversation after a rollback?**
-No — there is always just one conversation, and its title normally carries over. The underlying session ID does change, though: DSH session logs are append-only and have no "delete a middle chunk" API, so the plugin forks a truncated branch, archives the original out of the sidebar, and deletes its log directory. If you referenced that session ID elsewhere, fetch it again. When the first message is deleted, the replacement is a new conversation that has not been titled yet, so it may show the default title.
+No — there is always just one conversation, and its title normally carries over. The underlying session ID does change, though: DSH session logs are append-only and have no "delete a middle chunk" API, so the plugin forks a truncated branch, removes the original from the sidebar, and deletes its log directory directly; the normal path writes no archive entry. Repeated edits therefore do not pile up same-titled archive entries. If you referenced that session ID elsewhere, fetch it again. When the first message is deleted, the replacement is a new conversation that has not been titled yet, so it may show the default title.
 
 **Q: Can the original record be recovered?**
-Normally it is deleted. Only when its log directory is still held open and cannot be removed does the original stay in the archive.
+Normally it is deleted outright and never reaches the archive. Only when the live session cannot be detached, or its log directory is still held open and cannot be removed, does the plugin fall back to archiving it; the log is not silently lost.
 
 **Q: Why can't messages with attachments be edited?**
 Attachments are stored as part of the message content, and editing only supports plain-text messages. Messages with attachments can still be deleted.

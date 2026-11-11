@@ -12,7 +12,14 @@ import assert from 'node:assert/strict';
 import { promises as fsp } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apply, sessionDirectory, validSessionId } from './index.js';
+
+// `SESSIONS_ROOT` is fixed when the module loads, so point it at a throwaway
+// home before importing; the purge checks below create and remove real paths.
+const testHome = await fsp.mkdtemp(join(tmpdir(), 'dmr-home-'));
+process.env.DSH_HOME = testHome;
+const { apply, sessionDirectory, validSessionId } = await import('./index.js');
+const sessionsRoot = join(testHome, 'sessions');
+await fsp.mkdir(sessionsRoot, { recursive: true });
 
 let passed = 0;
 const check = async (label, fn) => {
@@ -286,15 +293,91 @@ await check('a deleted session is reported with a localizable code', async () =>
   assert.equal(envelope.result.error.details.rewindCode, 'missing-session');
 });
 
-await check('purge reports a failed archive instead of deleting', async () => {
-  const context = makeContext({
-    workspaceController: { archiveSession: async () => { throw new Error('workspace/session-active'); } },
+const makePurgeContext = (sessionId, calls, options = {}) => {
+  let live = options.live === false ? undefined : { id: sessionId };
+  const registry = {
+    archivedSessionIds: options.archived === true ? [sessionId] : [],
+    list: () => [{
+      id: 'ws-1',
+      sessionIds: [sessionId],
+      detachSession: async (id) => { calls.push(['workspace', id]); },
+    }],
+  };
+  return makeContext({
+    get: (name) => {
+      if (name === 'sessions') {
+        return {
+          get: (id) => (id === sessionId ? live : undefined),
+          flush: async () => { calls.push('flush'); },
+          liveEntryFor: () => live,
+          detachEntered: () => {
+            calls.push('detach');
+            if (options.failDetach === true) throw new Error('session is still live');
+            live = undefined;
+          },
+        };
+      }
+      if (name === 'workspaceRegistry') return registry;
+      if (name === 'sessionProjectionCache') {
+        return { requireTable: () => ({ delete: async (id) => { calls.push(['cache', id]); } }) };
+      }
+      return undefined;
+    },
+    workspaceController: {
+      archiveSession: async () => { calls.push('archive'); },
+      unarchiveSession: async () => { calls.push('unarchive'); },
+    },
+    parallel: async (event) => { calls.push(['parallel', event]); },
+    emit: (event, id) => { calls.push(['emit', event, id]); },
   });
-  apply(context);
-  const { envelope } = await rpc(registrations.at(-1).handler, 'purge', { sessionId: 'session-11111111-2222-3333-4444-555555555555' });
+};
+
+const makeSessionDir = async (sessionId) => {
+  const directory = join(sessionsRoot, '--D-Code-test--', sessionId);
+  await fsp.mkdir(directory, { recursive: true });
+  await fsp.writeFile(join(directory, 'session.v4.jsonl.zstd'), 'log');
+  return directory;
+};
+
+await check('purge deletes a live source session directly, without archiving', async () => {
+  const sessionId = 'session-11111111-1111-1111-1111-111111111111';
+  const directory = await makeSessionDir(sessionId);
+  const calls = [];
+  apply(makePurgeContext(sessionId, calls));
+  const { envelope } = await rpc(registrations.at(-1).handler, 'purge', { sessionId });
   assert.equal(envelope.result.ok, true);
+  assert.equal(envelope.result.value.removed, true);
+  assert.equal(await fsp.stat(directory).catch(() => undefined), undefined);
+  assert.ok(calls.includes('flush'), 'the live session was flushed before deletion');
+  assert.ok(calls.includes('detach'), 'the live session was detached');
+  assert.ok(calls.some((call) => call[0] === 'parallel' && call[1] === 'workspace/session-stop'), 'queued work was stopped');
+  assert.ok(calls.some((call) => call[0] === 'workspace' && call[1] === sessionId), 'workspace accounting was dropped');
+  assert.ok(calls.some((call) => call[0] === 'cache' && call[1] === sessionId), 'the projection cache was dropped');
+  assert.equal(calls.includes('archive'), false, 'the source was not archived');
+});
+
+await check('purge keeps the log and archives when a live session cannot be detached', async () => {
+  const sessionId = 'session-33333333-3333-3333-3333-333333333333';
+  const directory = await makeSessionDir(sessionId);
+  const calls = [];
+  apply(makePurgeContext(sessionId, calls, { failDetach: true }));
+  const { envelope } = await rpc(registrations.at(-1).handler, 'purge', { sessionId });
   assert.equal(envelope.result.value.removed, false);
-  assert.match(envelope.result.value.message, /归档失败/);
+  assert.equal(envelope.result.value.archivedOnly, true);
+  assert.ok(calls.includes('archive'), 'the undetachable session was archived instead');
+  assert.ok(await fsp.stat(directory), 'the log was left in place');
+});
+
+await check('purge removes a cold session row and its archived flag', async () => {
+  const sessionId = 'session-22222222-2222-2222-2222-222222222222';
+  const directory = await makeSessionDir(sessionId);
+  const calls = [];
+  apply(makePurgeContext(sessionId, calls, { live: false, archived: true }));
+  const { envelope } = await rpc(registrations.at(-1).handler, 'purge', { sessionId });
+  assert.equal(envelope.result.value.removed, true);
+  assert.equal(await fsp.stat(directory).catch(() => undefined), undefined);
+  assert.ok(calls.some((call) => call[0] === 'emit' && call[1] === 'api-session/removed'), 'the client row was removed');
+  assert.ok(calls.includes('unarchive'), 'an archive flag left by an older version was dropped');
 });
 
 await check('purge reports a missing log directory honestly', async () => {
@@ -302,6 +385,9 @@ await check('purge reports a missing log directory honestly', async () => {
   const { envelope } = await rpc(registrations.at(-1).handler, 'purge', { sessionId: 'session-11111111-2222-3333-4444-555555555555' });
   assert.equal(envelope.result.value.removed, false);
   assert.equal(envelope.result.value.archivedOnly, false);
+  assert.equal(routeCalls.some((call) => call[0] === 'archive'), false, 'a missing log was not archived');
 });
+
+await fsp.rm(testHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 
 console.log(`index self-check passed (${passed} scenarios)`);
