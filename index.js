@@ -1,5 +1,5 @@
 import { promises as fsp } from 'node:fs';
-import { basename, isAbsolute, join, relative, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { prepareCut, userError } from './rewind.js';
@@ -8,8 +8,8 @@ import { planRewind, applyRewind } from './files.js';
 const MAX_BODY_BYTES = 1024 * 1024;
 const CHANNEL = '/message-rewind';
 const DIFF_TIMEOUT = 30_000;
-/** Matches the `$DSH_HOME` > `~/.dsh` resolution the harness itself uses. */
-const SESSIONS_ROOT = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'sessions');
+/** Matches the `$DSH_HOME` > `~/.dsh` resolution the harness itself uses, where a blank override counts as unset. */
+const SESSIONS_ROOT = join(process.env.DSH_HOME?.trim() ? process.env.DSH_HOME : join(homedir(), '.dsh'), 'sessions');
 /** The harness mints `session-<uuid>`; refuse anything that could address a path. */
 const SESSION_ID = /^session-[0-9a-zA-Z]+(?:-[0-9a-zA-Z]+)*$/;
 
@@ -90,7 +90,9 @@ async function insideGitWorkTree(cwd) {
     } catch {
       /* keep walking up */
     }
-    const parent = join(current, '..');
+    // `dirname` reaches a fixed point (`.` or the filesystem root) even for a
+    // relative cwd, where joining `..` would never end the walk.
+    const parent = dirname(current);
     if (parent === current) return false;
     current = parent;
   }
@@ -107,6 +109,9 @@ export function apply(ctx) {
   async function readDiff(sessionId, seq, index) {
     const diff = await ctx.workspaceChanges.diff(sessionId, seq, index, diffTimeout());
     if (!diff) throw userError('snapshot-missing', '文件改动快照已不可用，未回滚任何文件。');
+    // Oversized text is refused by the recorder before it can be compared; it
+    // is not binary, so report the size limit instead of the encoding.
+    if (diff.kind === 'oversized') throw userError('oversized-file', `文件超过回滚大小上限：${diff.display}`);
     if (diff.kind !== 'text') throw userError('binary-file', `只能回滚文本文件：${diff.display}`);
     if (diff.coarse) throw userError('coarse-diff', `改动过大，无法安全回滚：${diff.display}`);
     return diff;
@@ -162,6 +167,13 @@ export function apply(ctx) {
         incomplete = true;
         continue;
       }
+      // The recorder caps `files` at its maxFiles budget while `total` counts
+      // every changed file; the surplus cannot be read back, so the snapshot is
+      // not complete and rolling files back would silently leave some changed.
+      if (summary.total > summary.files.length) incomplete = true;
+      // A path outside the session working directory is stored absolute; the
+      // rewind plan refuses it, so the dialog must not offer a file rollback.
+      if (summary.files.some((file) => isAbsolute(file.path))) incomplete = true;
       for (const file of summary.files) files.set(`${summary.cwd}\0${file.path}`, file.display);
     }
     return { files: [...files.values()], incomplete };
@@ -219,9 +231,9 @@ export function apply(ctx) {
     let restored = 0;
     let undo = null;
     if (withFiles) {
-      if (describe(records).incomplete) throw userError('incomplete-snapshot', '部分文件改动快照已不可用，只能只回滚消息。');
+      if (describe(records).incomplete) throw userError('incomplete-snapshot', '部分文件改动快照不可用或记录不完整，只能回滚消息。');
       if (records.some((record) => record.summary)) {
-        if (!inspection.meta.cwd) throw userError('no-workspace', '这个会话没有工作区，只能只回滚消息。');
+        if (!inspection.meta.cwd) throw userError('no-workspace', '这个会话没有工作区，只能回滚消息。');
         const targets = await plan(sessionId, records);
         const applied = await applyRewind(targets);
         undo = applied.undo;

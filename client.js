@@ -16,12 +16,12 @@ window.__ModuleLoader__.load({
       filesCount: '已记录 {n} 处文件改动',
       messagesOnly: '只回滚消息', withFiles: '连文件一起回滚',
       fileWarning: '文件会还原到这条消息之前。',
-      incomplete: '文件快照已失效，只能回滚消息。',
+      incomplete: '文件改动快照不可用或改动记录不完整，只能回滚消息。',
       running: '当前有未结束的轮次，请先停止运行',
       queued: '排队中的消息会一并作废。',
       noGit: '工作区不在 Git 仓库内：只有 DSH 文件工具的改动可回滚。',
       attachments: '含附件的消息暂时只能删除，不能编辑',
-      empty: '消息不能为空', failed: '操作失败，请重试。', dialog: '消息回滚',
+      failed: '操作失败，请重试。',
       'error.invalid-message': '消息位置无效。',
       'error.stale-message': '这条消息已不在当前对话记录里，请刷新后重试。',
       'error.not-user-message': '只能编辑或删除你发送的消息。',
@@ -30,6 +30,7 @@ window.__ModuleLoader__.load({
       'error.file-unreadable': '有文件无法读取，未回滚任何文件。',
       'error.file-too-large': '有文件超过文本回滚上限，未回滚任何文件。',
       'error.file-binary': '有文件不是 UTF-8 文本，未回滚任何文件。',
+      'error.oversized-file': '文件超过回滚大小上限，未回滚任何文件。',
       'error.file-rewind': '文件回滚失败，未写入任何文件。',
       'error.path-escape': '有文件不在该轮工作区内，未回滚任何文件。',
       'error.file-restore-failed': '文件回滚中断，部分文件需人工检查。',
@@ -40,8 +41,8 @@ window.__ModuleLoader__.load({
       'error.open-turn': '请先停止当前运行，再编辑或删除消息。',
       'error.attachments': '含附件的消息暂时只能删除，不能编辑。',
       'error.empty-message': '消息不能为空。',
-      'error.incomplete-snapshot': '部分文件改动快照已不可用，只能只回滚消息。',
-      'error.no-workspace': '这个会话没有工作区，只能只回滚消息。',
+      'error.incomplete-snapshot': '部分文件改动快照不可用或改动记录不完整，只能回滚消息。',
+      'error.no-workspace': '这个会话没有工作区，只能回滚消息。',
       'error.invalid-session': '会话标识无效。',
       'error.missing-session': '找不到这个会话，它可能已被删除。',
       'error.unknown-endpoint': '未知接口。',
@@ -59,12 +60,12 @@ window.__ModuleLoader__.load({
       filesCount: '{n} file changes recorded',
       messagesOnly: 'Messages only', withFiles: 'Messages + files',
       fileWarning: 'Files are restored to their state before this message.',
-      incomplete: 'File snapshots are gone; messages only.',
+      incomplete: 'File snapshots are unavailable or the change record is incomplete; messages only.',
       running: 'A turn is still running — stop it first',
       queued: 'Queued prompts are discarded too.',
       noGit: 'No Git here: only DSH file-tool edits can be rolled back.',
       attachments: 'Messages with attachments can only be deleted, not edited',
-      empty: 'Message cannot be empty', failed: 'Operation failed. Please try again.', dialog: 'Message rewind',
+      failed: 'Operation failed. Please try again.',
       'error.invalid-message': 'Invalid message position.',
       'error.stale-message': 'This message is no longer in the conversation. Refresh and try again.',
       'error.not-user-message': 'Only messages you sent can be edited or deleted.',
@@ -73,6 +74,7 @@ window.__ModuleLoader__.load({
       'error.file-unreadable': 'A file could not be read, so nothing was rolled back.',
       'error.file-too-large': 'A file exceeds the text-rollback size limit, so nothing was rolled back.',
       'error.file-binary': 'A file is not UTF-8 text, so nothing was rolled back.',
+      'error.oversized-file': 'A file exceeds the rollback size limit, so nothing was rolled back.',
       'error.file-rewind': 'File rollback failed; nothing was written.',
       'error.path-escape': 'A file lies outside that turn\u2019s workspace, so nothing was rolled back.',
       'error.file-restore-failed': 'File rollback was interrupted; some files need manual checking.',
@@ -83,7 +85,7 @@ window.__ModuleLoader__.load({
       'error.open-turn': 'Stop the running turn before editing or deleting messages.',
       'error.attachments': 'Messages with attachments can only be deleted.',
       'error.empty-message': 'The message cannot be empty.',
-      'error.incomplete-snapshot': 'Some file snapshots are unavailable; roll back messages only.',
+      'error.incomplete-snapshot': 'Some file snapshots are unavailable or the change record is incomplete; roll back messages only.',
       'error.no-workspace': 'This conversation has no workspace; roll back messages only.',
       'error.invalid-session': 'Invalid session id.',
       'error.missing-session': 'This conversation no longer exists.',
@@ -269,7 +271,7 @@ window.__ModuleLoader__.load({
         const onKey = (event) => {
           if (event.key === 'Escape' && !lockedRef.current) { event.preventDefault(); onClose(); return; }
           if (event.key !== 'Tab' || !node) return;
-          const items = [...(node.querySelectorAll?.('textarea, input:not(:disabled), button:not(:disabled)') ?? [])];
+          const items = [...(node.querySelectorAll?.('textarea:not(:disabled), input:not(:disabled), button:not(:disabled)') ?? [])];
           if (items.length === 0) { event.preventDefault(); return; }
           const firstItem = items[0];
           const lastItem = items[items.length - 1];
@@ -394,9 +396,9 @@ window.__ModuleLoader__.load({
         const getSnapshot = () => current;
         // Loading is the only cancellable busy phase: an execute that already
         // reached the Host cannot be safely abandoned from the Client.
+        const writing = () => current !== null && current.busy && current.phase !== 'loading';
         const close = () => {
-          if (!current) return;
-          if (current.busy && current.phase !== 'loading') return;
+          if (!current || writing()) return;
           current.abort?.abort();
           publish(null);
         };
@@ -498,12 +500,16 @@ window.__ModuleLoader__.load({
         const isOpenFor = (kind, sessionId, seq) => current !== null && current.kind === kind && current.sessionId === sessionId && current.seq === seq;
 
         function openEdit(sessionId, seq, text, anchor) {
+          // A write in flight keeps its dialog: replacing it would strand the
+          // reply that still owns navigation and source cleanup.
+          if (writing()) return;
           const dialog = { token: {}, instance: ++opens, kind: 'edit', sessionId, seq, text, anchor: anchor ?? null, phase: 'edit', busy: false, checking: true, error: null, details: null, abort: new AbortController() };
           publish(dialog);
           void inspectEdit(dialog);
         }
 
         function openDelete(sessionId, seq, anchor) {
+          if (writing()) return;
           publish({ token: {}, instance: ++opens, kind: 'delete', sessionId, seq, text: '', anchor: anchor ?? null, phase: 'loading', busy: true, error: null, details: null, abort: new AbortController() });
           void check();
         }

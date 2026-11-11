@@ -66,11 +66,11 @@ cordis.patch.yml    bundle patch
 - Host 侧的失败都带 `rewindCode`，客户端按 code 查 zh/en 字典，拿不到词条才回退到 Host 的原文。
 - UI 侧替换 `conversation.chat.node` 的 `user` 键渲染器（该 slot 的 `replaceRisk` 就是 `shadows-shipped-ui`）：气泡内容仍由官方 `conversation.chat.user.content` 工厂渲染，图标/剪切板兜底是插件自己的 `dmr-` 前缀实现，不再 require `@deepseek-ai/dsh-client-ui-primitives`（官方 practices 明确不要依赖 Client 包）。
 - 编辑/删除不是居中弹窗，而是锚定在**点击的那个按钮下方**的小窗：`popover-geometry` 区域是纯函数（`placePopover`），下方放不下就翻到上方，左右和箭头都被夹在视口内；`client.test.js` 按 `#region` 标记把这段源码抠出来直接跑，所以改定位逻辑要保留那两行标记。
-- 小窗只在组件挂载时测一次位置：用 `ResizeObserver`、`scroll`（捕获）和 `resize` 跟随，不靠定时器；点窗外、按 Esc 关闭（`loading` 阶段允许取消，读取/写入进行中不放弃）。`inspect`/`execute` 都带 30s 超时，过期的响应按 token 丢弃，不会把已关闭的小窗重新拉起来。
+- 小窗只在组件挂载时测一次位置：用 `ResizeObserver`、`scroll`（捕获）和 `resize` 跟随，不靠定时器；点窗外、按 Esc 关闭（`loading` 阶段允许取消；写入进行中按 Esc/点窗外不关闭）。`inspect`/`execute` 都带 30s 超时，过期的响应按 token 丢弃，不会把已关闭的小窗重新拉起来。
 
 ## 发布到 npm
 
-npm 上当前是 `dsh-message-rewind@1.2.0`（2026-11-03 发布）。发布用 granular access token（Read and write + All packages + **Bypass 2FA**），token 存本机私有文件、不要进仓库；用临时 npmrc 传给 npm：
+npm 上当前是 `dsh-message-rewind@1.2.2`（2026-11-06 发布）。发布用 granular access token（Read and write + All packages + **Bypass 2FA**），token 存本机私有文件、不要进仓库；用临时 npmrc 传给 npm：
 
 ```powershell
 $token = (Get-Content '<本机 token 文件>' -Raw).Trim()
@@ -87,7 +87,7 @@ Remove-Item "$env:TEMP\npm-publish.rc" -Force
 ```bash
 npm version patch --no-git-tag-version   # 只改 package.json 版本号
 npm test
-git add -A && git commit -m "chore: release <version>"
+git add package.json && git commit -m "chore: release <version>"
 git tag -a v<version> -m "## 改动……"       # annotated tag 的描述就是 Release notes
 git push --follow-tags
 npm publish                               # 见上面的 staged publishing 说明

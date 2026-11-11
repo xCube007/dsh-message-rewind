@@ -54,6 +54,25 @@ const offset = [
 assert.deepEqual(prepareCut(offset, 44), { content: [{ type: 'text', text: 'last' }], boundary: 42, hasOpenTurn: false, records: [] });
 assert.deepEqual(prepareCut(offset, 41), { content: [{ type: 'text', text: 'later' }], boundary: undefined, hasOpenTurn: false, records: [] });
 
+// One turn can record `workspace/changes` more than once — the recorder reads
+// when the turn stops and again at `turn/end` for a tool result that settled in
+// between — and a later record supersedes the earlier ones. Only the last record
+// of each turn may be replayed, or the same diff is inverted twice.
+const repeated = [
+  { seq: 0, type: 'turn/start' },
+  { seq: 1, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'go' }] } },
+  { seq: 2, type: 'workspace/changes', data: { turn: 1 } },
+  { seq: 3, type: 'workspace/changes', data: { turn: 1 } },
+  { seq: 4, type: 'turn/end' },
+  { seq: 5, type: 'turn/start' },
+  { seq: 6, type: 'workspace/changes', data: { turn: 2 } },
+  { seq: 7, type: 'workspace/changes', data: { turn: 2 } },
+  { seq: 8, type: 'turn/end' },
+];
+assert.deepEqual(prepareCut(repeated, 1).records, [3, 7]);
+// A record without a turn number cannot be grouped with a later one, so it stays.
+assert.deepEqual(prepareCut([...repeated, { seq: 9, type: 'workspace/changes' }], 1).records, [3, 7, 9]);
+
 const current = 'zero\none\ntwo\nthree\nfour\n';
 const diff = { before: true, after: true, hunks: [{ oldStart: 2, oldLines: 2, newStart: 2, newLines: 3, lines: [' one\n', '-two\n', '+TWO\n', '+two again\n', ' three\n'] }] };
 assert.equal(textSide(true, diff.hunks, true), 'one\nTWO\ntwo again\nthree\n');

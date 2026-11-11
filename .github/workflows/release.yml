@@ -20,6 +20,11 @@ jobs:
       TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # workflow_dispatch starts on the default branch, so the default checkout
+          # would pack main's package.json instead of the tag's. Pin it to the tag
+          # being published (push events already check out their tag).
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -32,6 +37,13 @@ jobs:
       - name: publish the GitHub release
         run: |
           version="${TAG#v}"
+          # Release notes are the annotated tag message; a lightweight tag has no
+          # tag object, so fail loudly instead of a bare 404 on /git/tags/.
+          tag_type=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.type)
+          if [ "$tag_type" != "tag" ]; then
+            echo "::error::$TAG is not an annotated tag (type: $tag_type); its message is the release notes. Recreate it with git tag -a." >&2
+            exit 1
+          fi
           tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)
           gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_sha" --jq .message > release-notes.md
           if gh release view "$TAG" >/dev/null 2>&1; then

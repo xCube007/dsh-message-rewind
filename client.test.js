@@ -143,6 +143,15 @@ assert.ok(nodeRegistration, 'the user chat node renderer is registered');
 assert.equal(nodeRegistration.options.priority, -1, 'a lower priority shadows the shipped user row instead of colliding with it');
 assert.ok(overlayRegistration, 'the overlay dialog is registered');
 
+// --- both dictionaries stay in step, and unused entries stay gone -----------
+const dictionaries = calls.filter((call) => call[0] === 'locale.register').map((call) => call[3]);
+assert.deepEqual(Object.keys(dictionaries[0]).sort(), Object.keys(dictionaries[1]).sort(), 'zh and en expose the same keys');
+for (const key of ['empty', 'dialog']) {
+  assert.equal(key in dictionaries[0], false, `the unused "${key}" translation is gone`);
+}
+assert.ok('error.oversized-file' in dictionaries[0] && 'error.oversized-file' in dictionaries[1], 'the oversized comparison code is localized');
+assert.ok(!Object.values(dictionaries[0]).some((text) => text.includes('只能只')), 'the duplicated 只 in the rollback hint is gone');
+
 // --- render the user message row -------------------------------------------
 const rendered = [];
 const renderUser = (data, running = false) => {
@@ -391,6 +400,36 @@ lateFooter.children[0].props.onClick();
 assert.ok(!renderDialog(), 'the loading phase can be cancelled');
 await new Promise((resolve) => setTimeout(resolve, 60));
 assert.ok(!renderDialog(), 'the late inspect response does not reopen the popover');
+
+// --- a write in flight keeps its dialog --------------------------------------
+let finishExecute;
+ctx.connection.rpc.call = (channel, endpoint, payload) => {
+  calls.push(['rpc.call', channel, endpoint, payload]);
+  if (endpoint === 'execute') {
+    return new Promise((resolve) => {
+      finishExecute = () => resolve({ ok: true, value: { sessionId: 'child-1', restored: 0, sourceSessionId: payload.sessionId } });
+    });
+  }
+  if (endpoint === 'purge') return Promise.resolve({ ok: true, value: { removed: true, archivedOnly: false } });
+  return Promise.resolve({ ok: true, value: { files: [], incomplete: false, unfinished: false } });
+};
+const executeCalls = () => calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').length;
+clickAction(editButton, editAnchor);
+await tick();
+assert.ok(renderDialog(), 'the edit dialog opens');
+const beforeWrite = executeCalls();
+footer().children.filter(Boolean).at(-1).props.onClick();
+await tick();
+assert.ok(renderDialog(), 'the dialog stays up while the write is in flight');
+clickAction(deleteButton, deleteAnchor);
+assert.equal(popoverOf(renderDialog())?.props.kind, 'edit', 'another action cannot replace the busy dialog');
+assert.equal(executeCalls(), beforeWrite + 1, 'and starts no second write');
+popoverOf(renderDialog()).props.onClose();
+assert.ok(renderDialog(), 'a write in flight is not dismissed by Escape or a click outside');
+finishExecute();
+await tick();
+assert.ok(!renderDialog(), 'the finished write closes its dialog');
+await new Promise((resolve) => setTimeout(resolve, 400));
 
 // --- placement: below the button, flipped when needed, always on screen -----
 const geometry = source.match(/#region popover-geometry([\s\S]*?)#endregion/);

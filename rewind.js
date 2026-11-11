@@ -19,7 +19,7 @@ export function userError(code, message) {
  * @param events - a session's event prefix, ordered by `seq`.
  * @param seq - the exact `seq` of the user message to cut at.
  * @returns the message content, the fork boundary (undefined when nothing precedes the turn),
- *   whether the cut spans an open turn, and the `workspace/changes` sequences removed by the cut.
+ *   whether the cut spans an open turn, and each cut turn's last `workspace/changes` sequence.
  */
 export function prepareCut(events, seq) {
   if (!Number.isSafeInteger(seq) || seq < 0) throw userError('invalid-message', '消息位置无效。');
@@ -48,11 +48,23 @@ export function prepareCut(events, seq) {
     if (event.type === 'turn/start') hasOpenTurn = true;
     else if (event.type === 'turn/end') hasOpenTurn = false;
   }
-  const records = events
-    .slice(position)
-    .filter((event) => event.type === 'workspace/changes')
-    .map((event) => event.seq)
-    .sort((left, right) => left - right);
+  // One turn can append several `workspace/changes` records: the recorder reads
+  // once when the turn stops and again at `turn/end` when a tool result settled
+  // in between, and a later record supersedes the earlier ones. Only a turn's
+  // last record describes its net change, so replaying the others would invert
+  // the same diff twice.
+  const records = [];
+  const turns = new Set();
+  for (let cursor = events.length - 1; cursor >= position; cursor--) {
+    const event = events[cursor];
+    if (event.type !== 'workspace/changes') continue;
+    const turn = event.data?.turn;
+    if (Number.isSafeInteger(turn)) {
+      if (turns.has(turn)) continue;
+      turns.add(turn);
+    }
+    records.unshift(event.seq);
+  }
   return { content, boundary, hasOpenTurn, records };
 }
 

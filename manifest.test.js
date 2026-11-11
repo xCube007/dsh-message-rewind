@@ -18,6 +18,14 @@ assert.equal(pkg.dsh?.manifestVersion, 1);
 assert.equal(pkg.dsh?.bundle?.patch, './cordis.patch.yml');
 assert.equal(pkg.dsh?.client?.platform, 'web');
 assert.equal(pkg.exports?.['./client'], './client.js');
+assert.equal(pkg.exports?.['./package.json'], './package.json');
+assert.equal(pkg.main, './index.js');
+// The published tarball must carry every runtime file and no development-only
+// self-checks; CI runs `npm pack --dry-run` against the same list.
+for (const file of ['index.js', 'rewind.js', 'files.js', 'client.js', 'cordis.patch.yml', 'locale/*.json', 'icon.svg', 'README.en.md']) {
+  assert.ok(pkg.files?.includes(file), `files must include ${file}`);
+}
+assert.equal(pkg.files?.includes('*.test.js'), false, 'self-checks stay out of the tarball');
 
 const client = await readFile(new URL('./client.js', import.meta.url), 'utf8');
 assert.match(client, new RegExp(`id: '${pkg.name}'`), 'the client bundle id must be the package name');

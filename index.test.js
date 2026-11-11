@@ -175,6 +175,86 @@ await check('execute binds the replacement to the source workspace', async () =>
   assert.deepEqual(routeCalls.filter((call) => call[0] === 'create').at(-1)[1], { workspaceId: 'ws-1', agentPreset: 'preset-a' });
 });
 
+// A file rollback is offered only while every recorded change can be read back
+// and reverted. The recorder truncates `files` at maxFiles while `total` keeps
+// the real count, and stores a file outside the session cwd as an absolute path
+// that the rewind plan refuses; both must show up as `incomplete` before the
+// user can confirm a file rollback.
+const summaryEvents = [
+  { seq: 0, type: 'turn/start', data: { turn: 1 } },
+  { seq: 1, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'hi' }] } },
+  { seq: 2, type: 'workspace/changes', data: { turn: 1 } },
+  { seq: 3, type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } },
+];
+const contextWithSummary = (summary) => makeContext({
+  workspaceChanges: { summary: () => summary, diff: async () => undefined },
+  sessionQuery: {
+    readSession: async () => ({ session: { id: 'session-source', cwd: tmpdir() }, events: summaryEvents }),
+  },
+});
+const incompleteSummaries = [
+  ['a maxFiles-truncated summary', { turn: 1, cwd: tmpdir(), files: [{ path: 'a.txt', display: 'a.txt' }], total: 2, added: 0, deleted: 0 }, ['a.txt']],
+  ['a change outside the session cwd', { turn: 1, cwd: tmpdir(), files: [{ path: join(tmpdir(), 'outside.txt'), display: '../outside.txt' }], total: 1, added: 1, deleted: 0 }, ['../outside.txt']],
+];
+for (const [label, summary, files] of incompleteSummaries) {
+  await check(`${label} is reported as incomplete`, async () => {
+    apply(contextWithSummary(summary));
+    const handler = registrations.at(-1).handler;
+    const inspected = await rpc(handler, 'inspect', { sessionId: 'session-source', seq: 1 });
+    assert.deepEqual(inspected.envelope.result.value.files, files);
+    assert.equal(inspected.envelope.result.value.incomplete, true);
+    const refused = await rpc(handler, 'execute', { sessionId: 'session-source', seq: 1, action: 'delete', rewindFiles: true });
+    assert.equal(refused.envelope.result.ok, false);
+    assert.equal(refused.envelope.result.error.details.rewindCode, 'incomplete-snapshot');
+  });
+}
+
+await check("only a turn's last recorded summary is loaded", async () => {
+  const summaries = [];
+  const context = makeContext({
+    workspaceChanges: {
+      summary: (sessionId, seq) => {
+        summaries.push(seq);
+        return { turn: 1, cwd: 'D:/tmp', files: [], total: 0, added: 0, deleted: 0 };
+      },
+      diff: async () => undefined,
+    },
+    sessionQuery: {
+      readSession: async () => ({
+        session: { id: 'session-source', cwd: 'D:/tmp' },
+        events: [
+          { seq: 0, type: 'turn/start', data: { turn: 1 } },
+          { seq: 1, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'hi' }] } },
+          { seq: 2, type: 'workspace/changes', data: { turn: 1 } },
+          { seq: 3, type: 'workspace/changes', data: { turn: 1 } },
+          { seq: 4, type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } },
+        ],
+      }),
+    },
+  });
+  apply(context);
+  const { envelope } = await rpc(registrations.at(-1).handler, 'inspect', { sessionId: 'session-source', seq: 1 });
+  assert.equal(envelope.result.ok, true);
+  assert.deepEqual(summaries, [3]);
+});
+
+await check('an oversized text comparison is reported as its own code', async () => {
+  const summary = { turn: 1, cwd: tmpdir(), files: [{ path: 'big.txt', display: 'big.txt' }], total: 1, added: 1, deleted: 0 };
+  const context = makeContext({
+    workspaceChanges: {
+      summary: () => summary,
+      diff: async () => ({ kind: 'oversized', path: 'big.txt', display: 'big.txt' }),
+    },
+    sessionQuery: {
+      readSession: async () => ({ session: { id: 'session-source', cwd: tmpdir() }, events: summaryEvents }),
+    },
+  });
+  apply(context);
+  const { envelope } = await rpc(registrations.at(-1).handler, 'execute', { sessionId: 'session-source', seq: 1, action: 'delete', rewindFiles: true });
+  assert.equal(envelope.result.ok, false);
+  assert.equal(envelope.result.error.details.rewindCode, 'oversized-file');
+});
+
 await check('an open turn is refused with a localizable code', async () => {
   const context = makeContext({
     sessionQuery: {
