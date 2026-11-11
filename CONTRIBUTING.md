@@ -70,7 +70,7 @@ cordis.patch.yml    bundle patch
 
 ## 发布到 npm
 
-npm 上当前是 `dsh-message-rewind@1.2.2`（2026-11-06 发布）。发布用 granular access token（Read and write + All packages + **Bypass 2FA**），token 存本机私有文件、不要进仓库；用临时 npmrc 传给 npm：
+npm 上当前是 `dsh-message-rewind@1.2.3`（2026-11-11 发布）。发布用 granular access token（Read and write + All packages + **Bypass 2FA**），token 存本机私有文件、不要进仓库；用临时 npmrc 传给 npm：
 
 ```powershell
 $token = (Get-Content '<本机 token 文件>' -Raw).Trim()

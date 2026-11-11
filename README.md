@@ -66,7 +66,7 @@ dsh plugin --profile web add dsh-message-rewind
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.2.2"
+       "dsh-message-rewind": "^1.2.3"
      }
    }
    ```
