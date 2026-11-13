@@ -220,8 +220,8 @@ export function apply(ctx) {
     if (action !== 'delete' && action !== 'edit') throw userError('bad-action', '操作类型无效。');
     const withFiles = request?.rewindFiles === true;
     const { inspection, cut, records } = await load(sessionId, request?.seq);
-    if (cut.hasOpenTurn) throw userError('open-turn', '请先停止当前运行，再编辑或删除消息。');
-    if (action === 'edit' && cut.content.some((block) => block.type !== 'text')) throw userError('attachments', '含附件的消息暂时只能删除，不能编辑。');
+    if (cut.hasOpenTurn) throw userError('open-turn', '请先停止当前运行，再编辑或回滚消息。');
+    if (action === 'edit' && cut.content.some((block) => block.type !== 'text')) throw userError('attachments', '含附件的消息暂时只能回滚，不能编辑。');
     let content = cut.content;
     if (action === 'edit') {
       const replacement = typeof request?.text === 'string' ? request.text.trim() : '';

@@ -1,6 +1,6 @@
 /**
  * Headless smoke test for the client half: it installs against a stubbed Cordis
- * context, then renders the message actions and the anchored edit/delete
+ * context, then renders the message actions and the anchored edit/rollback
  * popover with a minimal React stand-in. No browser and no real React are
  * involved; the popover's placement math is pure and tested on its own.
  */
@@ -174,12 +174,14 @@ assert.equal(rendered[0][1].interactive, true);
 const actions = tree.children[1];
 assert.equal(actions.props.className, 'dmr-actions');
 const buttons = actions.children.filter(Boolean);
-assert.equal(buttons.length, 4, 'clock plus edit, delete and copy');
+assert.equal(buttons.length, 4, 'clock plus edit, rollback and copy');
 const inner = buttons.slice(1);
-const [editButton, deleteButton] = inner;
-assert.equal(inner.length, 3, 'edit, delete and copy');
+const [editButton, rollbackButton] = inner;
+assert.equal(inner.length, 3, 'edit, rollback and copy');
 assert.equal(editButton.props.className, 'dmr-action');
-assert.match(deleteButton.props.className, /dmr-danger/);
+assert.equal(rollbackButton.props.className, 'dmr-action', 'rollback is a regular action, not a destructive one');
+const rollbackGlyph = rollbackButton.children[0].type({});
+assert.match(rollbackGlyph.children[0].props.d, /^M5\.7 3 3 5\.7/, 'the rollback action uses the undo arrow glyph');
 assert.match(actions.children[0].children[0], /^\d{2}:\d{2}$/, 'today shows a 24h clock only');
 
 // an older message carries the localized date prefix, like the shipped row
@@ -192,7 +194,7 @@ const imageTicket = { attachmentId: 'img-1', mediaType: 'image/png', bytes: 1, w
 const imageTree = renderUser({ seq: 8, time: Date.now(), content: [{ type: 'image', attachment: imageTicket }] });
 const imageButtons = imageTree.children[1].children.filter(Boolean).slice(1);
 assert.equal(imageButtons[0].props.disabled, true, 'attachment messages disable edit');
-assert.equal(imageButtons[1].props.disabled, undefined, 'attachment messages stay deletable');
+assert.equal(imageButtons[1].props.disabled, undefined, 'attachment messages stay available for rollback');
 
 // --- the dialog is a popover anchored to the clicked button -----------------
 const renderDialog = () => { react.__enter('dialog'); return overlayRegistration.component({}); };
@@ -306,13 +308,13 @@ staleButtons[0].props.onClick();
 assert.ok(!renderDialog(), 'cancel closes the stale-snapshot popover');
 inspectResult = { files: [], incomplete: false, unfinished: false };
 
-// --- delete flow ------------------------------------------------------------
-const deleteAnchor = { tagName: 'BUTTON', id: 'delete-trigger' };
-clickAction(deleteButton, deleteAnchor);
+// --- rollback flow ----------------------------------------------------------
+const rollbackAnchor = { tagName: 'BUTTON', id: 'rollback-trigger' };
+clickAction(rollbackButton, rollbackAnchor);
 dialog = treeOf();
 pop = dialog.children[0];
 assert.equal(pop.props.className, 'dmr-pop dmr-pop-delete', 'the confirm bubble is narrower');
-assert.equal(popoverOf(renderDialog()).props.anchor, deleteAnchor, 'the delete bubble points at the bin');
+assert.equal(popoverOf(renderDialog()).props.anchor, rollbackAnchor, 'the rollback bubble points at its action button');
 assert.equal(popoverOf(renderDialog()).props.note, 'message-rewind:deleteNote');
 assert.equal(queryAll(dialog, (element) => element.props?.className === 'dmr-hint').at(0).children[1], 'message-rewind:loading');
 const loadingFooter = queryAll(dialog, (element) => element.props?.className === 'dmr-footer').at(0);
@@ -322,35 +324,35 @@ assert.deepEqual(loadingButtons.map((button) => button.children.join('')), [
   'message-rewind:deleteConfirm',
 ], 'the confirm stays put while the files are read');
 assert.ok(!loadingButtons[0].props.disabled, 'loading stays cancellable');
-assert.equal(loadingButtons[1].props.disabled, true, 'delete waits for the inspection');
+assert.equal(loadingButtons[1].props.disabled, true, 'rollback waits for the inspection');
 await tick();
 dialog = treeOf();
-const deleteFooter = queryAll(dialog, (element) => element.props?.className === 'dmr-footer').at(-1);
-const deleteButtons = deleteFooter.children.filter(Boolean);
-assert.equal(deleteButtons.length, 2, 'cancel plus delete');
-deleteButtons.at(-1).props.onClick();
+const rollbackFooter = queryAll(dialog, (element) => element.props?.className === 'dmr-footer').at(-1);
+const rollbackButtons = rollbackFooter.children.filter(Boolean);
+assert.equal(rollbackButtons.length, 2, 'cancel plus rollback');
+rollbackButtons.at(-1).props.onClick();
 await tick();
 const execute = calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1);
 assert.deepEqual(execute[3], { sessionId: 'session-1', seq: 7, action: 'delete', text: '', rewindFiles: false });
 await tick();
 assert.deepEqual(calls.filter((call) => call[0] === 'openSession').at(-1), ['openSession', 'child-1']);
 
-// --- delete asks the same question, so it renders the same control ----------
+// --- rollback asks the same question, so it renders the same control --------
 inspectResult = { files: ['test.txt'], incomplete: false, unfinished: false };
-clickAction(deleteButton, deleteAnchor);
+clickAction(rollbackButton, rollbackAnchor);
 await tick();
 dialog = treeOf();
-const deleteScope = queryAll(dialog, (element) => element.props?.role === 'radio');
-assert.equal(deleteScope.length, 2, 'delete offers the same scope control');
-assert.equal(deleteScope[0].props['aria-checked'], true, 'messages-only is the default');
-deleteScope[1].props.onClick();
-const deleteActions = queryAll(treeOf(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
-assert.deepEqual(deleteActions.map((button) => button.children.join('')), [
+const rollbackScope = queryAll(dialog, (element) => element.props?.role === 'radio');
+assert.equal(rollbackScope.length, 2, 'rollback offers the same scope control');
+assert.equal(rollbackScope[0].props['aria-checked'], true, 'messages-only is the default');
+rollbackScope[1].props.onClick();
+const rollbackActions = queryAll(treeOf(), (element) => element.props?.className === 'dmr-footer').at(-1).children.filter(Boolean);
+assert.deepEqual(rollbackActions.map((button) => button.children.join('')), [
   'message-rewind:cancel',
   'message-rewind:deleteConfirm',
-], 'the delete action follows the chosen scope');
-assert.match(deleteActions.at(-1).props.className, /dmr-destructive/, 'the destructive confirm is styled as such');
-deleteActions.at(-1).props.onClick();
+], 'the rollback action follows the chosen scope');
+assert.match(rollbackActions.at(-1).props.className, /dmr-primary/, 'rollback uses the primary action style');
+rollbackActions.at(-1).props.onClick();
 await tick();
 assert.deepEqual(
   calls.filter((call) => call[0] === 'rpc.call' && call[2] === 'execute').at(-1)[3],
@@ -378,7 +380,7 @@ ctx.connection.rpc.call = () => Promise.resolve({
   ok: false,
   error: { message: '请先停止当前运行', details: { rewindCode: 'open-turn' } },
 });
-clickAction(deleteButton, deleteAnchor);
+clickAction(rollbackButton, rollbackAnchor);
 await tick();
 const failed = queryAll(treeOf(), (element) => element.props?.className === 'dmr-error').at(0);
 assert.equal(failed.children[0], 'message-rewind:error.open-turn');
@@ -392,9 +394,9 @@ ctx.connection.rpc.call = (channel, endpoint, payload) => {
     globalThis.setTimeout(() => resolve({ ok: true, value: { files: [], incomplete: false, unfinished: false } }), 20);
   });
 };
-clickAction(deleteButton, deleteAnchor);
+clickAction(rollbackButton, rollbackAnchor);
 const loadingDialog = treeOf();
-assert.ok(loadingDialog, 'delete opens in the loading phase');
+assert.ok(loadingDialog, 'rollback opens in the loading phase');
 const lateFooter = queryAll(loadingDialog, (element) => element.props?.className === 'dmr-footer').at(0);
 lateFooter.children[0].props.onClick();
 assert.ok(!renderDialog(), 'the loading phase can be cancelled');
@@ -421,7 +423,7 @@ const beforeWrite = executeCalls();
 footer().children.filter(Boolean).at(-1).props.onClick();
 await tick();
 assert.ok(renderDialog(), 'the dialog stays up while the write is in flight');
-clickAction(deleteButton, deleteAnchor);
+clickAction(rollbackButton, rollbackAnchor);
 assert.equal(popoverOf(renderDialog())?.props.kind, 'edit', 'another action cannot replace the busy dialog');
 assert.equal(executeCalls(), beforeWrite + 1, 'and starts no second write');
 popoverOf(renderDialog()).props.onClose();

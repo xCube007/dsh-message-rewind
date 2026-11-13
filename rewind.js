@@ -27,7 +27,7 @@ export function prepareCut(events, seq) {
   const position = index.get(seq);
   const target = position === undefined ? undefined : events[position];
   if (target === undefined) throw userError('stale-message', '这条消息已不在当前对话记录里，请刷新后重试。');
-  if (target.type !== 'user/message' || target.data?.source?.kind !== 'user') throw userError('not-user-message', '只能编辑或删除你发送的消息。');
+  if (target.type !== 'user/message' || target.data?.source?.kind !== 'user') throw userError('not-user-message', '只能编辑或回滚你发送的消息。');
   const content = structuredClone(target.data.content ?? []);
   let boundary = position > 0 ? events[position - 1].seq : undefined;
   for (let cursor = position - 1; cursor >= 0; cursor--) {

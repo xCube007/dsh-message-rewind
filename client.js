@@ -7,12 +7,12 @@ window.__ModuleLoader__.load({
     const CHANNEL = '/message-rewind';
 
     const zh = {
-      edit: '编辑并重发', remove: '删除这条消息及其后的对话', copy: '复制', copied: '已复制',
+      edit: '编辑并重发', remove: '回滚这条消息及其后的对话', copy: '复制', copied: '已复制',
       'clock.md': '{m}月{d}日', 'clock.ymd': '{y}年{m}月{d}日',
-      cancel: '取消', loading: '正在检查文件改动…', save: '保存并重发', deleteConfirm: '删除', scope: '回滚范围', body: '消息内容',
-      editTitle: '编辑消息', deleteTitle: '删除这条消息？',
+      cancel: '取消', loading: '正在检查文件改动…', save: '保存并重发', deleteConfirm: '回滚', scope: '回滚范围', body: '消息内容',
+      editTitle: '编辑消息', deleteTitle: '回滚这条消息？',
       editNote: '截断之后的对话，再按新内容重发。',
-      deleteNote: '之后的对话会一起删除，无法恢复。',
+      deleteNote: '之后的对话会一起回滚，无法恢复。',
       filesCount: '已记录 {n} 处文件改动',
       messagesOnly: '只回滚消息', withFiles: '连文件一起回滚',
       fileWarning: '文件会还原到这条消息之前。',
@@ -20,11 +20,11 @@ window.__ModuleLoader__.load({
       running: '当前有未结束的轮次，请先停止运行',
       queued: '排队中的消息会一并作废。',
       noGit: '工作区不在 Git 仓库内：只有 DSH 文件工具的改动可回滚。',
-      attachments: '含附件的消息暂时只能删除，不能编辑',
+      attachments: '含附件的消息暂时只能回滚，不能编辑',
       failed: '操作失败，请重试。',
       'error.invalid-message': '消息位置无效。',
       'error.stale-message': '这条消息已不在当前对话记录里，请刷新后重试。',
-      'error.not-user-message': '只能编辑或删除你发送的消息。',
+      'error.not-user-message': '只能编辑或回滚你发送的消息。',
       'error.file-changed': '文件在记录之后又被修改过，已停止回滚，未覆盖任何文件。',
       'error.unsupported-diff': '这份文件差异暂不支持回滚。',
       'error.file-unreadable': '有文件无法读取，未回滚任何文件。',
@@ -38,8 +38,8 @@ window.__ModuleLoader__.load({
       'error.binary-file': '只能回滚文本文件。',
       'error.coarse-diff': '改动过大，无法安全回滚。',
       'error.bad-action': '操作类型无效。',
-      'error.open-turn': '请先停止当前运行，再编辑或删除消息。',
-      'error.attachments': '含附件的消息暂时只能删除，不能编辑。',
+      'error.open-turn': '请先停止当前运行，再编辑或回滚消息。',
+      'error.attachments': '含附件的消息暂时只能回滚，不能编辑。',
       'error.empty-message': '消息不能为空。',
       'error.incomplete-snapshot': '部分文件改动快照不可用或改动记录不完整，只能回滚消息。',
       'error.no-workspace': '这个会话没有工作区，只能回滚消息。',
@@ -51,12 +51,12 @@ window.__ModuleLoader__.load({
       'error.unknown': '操作失败，请重试。',
     };
     const en = {
-      edit: 'Edit and resend', remove: 'Delete this message and every following turn', copy: 'Copy', copied: 'Copied',
+      edit: 'Edit and resend', remove: 'Roll back this message and every following turn', copy: 'Copy', copied: 'Copied',
       'clock.md': '{m}/{d}', 'clock.ymd': '{y}-{m}-{d}',
-      cancel: 'Cancel', loading: 'Checking file changes…', save: 'Save and resend', deleteConfirm: 'Delete', scope: 'Rollback scope', body: 'Message text',
-      editTitle: 'Edit message', deleteTitle: 'Delete this message?',
+      cancel: 'Cancel', loading: 'Checking file changes…', save: 'Save and resend', deleteConfirm: 'Roll back', scope: 'Rollback scope', body: 'Message text',
+      editTitle: 'Edit message', deleteTitle: 'Roll back this message?',
       editNote: 'Cuts off later turns, then resends.',
-      deleteNote: 'Following turns are deleted too, for good.',
+      deleteNote: 'Following turns are rolled back too, for good.',
       filesCount: '{n} file changes recorded',
       messagesOnly: 'Messages only', withFiles: 'Messages + files',
       fileWarning: 'Files are restored to their state before this message.',
@@ -64,11 +64,11 @@ window.__ModuleLoader__.load({
       running: 'A turn is still running — stop it first',
       queued: 'Queued prompts are discarded too.',
       noGit: 'No Git here: only DSH file-tool edits can be rolled back.',
-      attachments: 'Messages with attachments can only be deleted, not edited',
+      attachments: 'Messages with attachments can only be rolled back, not edited',
       failed: 'Operation failed. Please try again.',
       'error.invalid-message': 'Invalid message position.',
       'error.stale-message': 'This message is no longer in the conversation. Refresh and try again.',
-      'error.not-user-message': 'Only messages you sent can be edited or deleted.',
+      'error.not-user-message': 'Only messages you sent can be edited or rolled back.',
       'error.file-changed': 'A file changed after it was recorded, so nothing was rolled back.',
       'error.unsupported-diff': 'This file diff cannot be rolled back.',
       'error.file-unreadable': 'A file could not be read, so nothing was rolled back.',
@@ -82,8 +82,8 @@ window.__ModuleLoader__.load({
       'error.binary-file': 'Only text files can be rolled back.',
       'error.coarse-diff': 'The change is too large to roll back safely.',
       'error.bad-action': 'Invalid operation.',
-      'error.open-turn': 'Stop the running turn before editing or deleting messages.',
-      'error.attachments': 'Messages with attachments can only be deleted.',
+      'error.open-turn': 'Stop the running turn before editing or rolling back messages.',
+      'error.attachments': 'Messages with attachments can only be rolled back.',
       'error.empty-message': 'The message cannot be empty.',
       'error.incomplete-snapshot': 'Some file snapshots are unavailable or the change record is incomplete; roll back messages only.',
       'error.no-workspace': 'This conversation has no workspace; roll back messages only.',
@@ -105,7 +105,6 @@ window.__ModuleLoader__.load({
       .dmr-action:disabled,.dmr-action[data-unavailable]{cursor:default;opacity:.4}
       .dmr-action:disabled:hover{background:0 0;color:var(--dsw-alias-label-tertiary)}
       .dmr-action:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}
-      .dmr-danger:not(:disabled):hover{color:var(--dsw-alias-state-error-primary)}
       .dmr-layer{position:fixed;inset:0;z-index:1000;pointer-events:none}
       .dmr-pop{position:fixed;z-index:1;box-sizing:border-box;visibility:hidden;pointer-events:auto;padding:14px 14px 12px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);box-shadow:var(--dsw-elevation-prominent);font-size:13px;line-height:20px}
       .dmr-pop-edit{width:min(420px,calc(100vw - 16px))}
@@ -153,8 +152,6 @@ window.__ModuleLoader__.load({
       .dmr-button:disabled{opacity:.45;cursor:not-allowed}
       .dmr-primary{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-foreground);font-weight:500;padding:5px 12px}
       .dmr-primary:not(:disabled):hover{background:var(--dsw-alias-button-primary-hover);color:var(--dsw-alias-label-primary-foreground)}
-      .dmr-destructive{background:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-label-primary-foreground);font-weight:500;padding:5px 12px}
-      .dmr-destructive:not(:disabled):hover{background:var(--dsw-alias-state-error-primary);box-shadow:inset 0 0 0 999px rgba(0,0,0,.12);color:var(--dsw-alias-label-primary-foreground)}
       @media (prefers-reduced-motion:reduce){.dmr-pop[data-ready]{animation:none}.dmr-spinner{animation-duration:2.4s}}
       @media (max-width:480px){.dmr-pop{padding:12px 12px 10px}.dmr-pop-edit,.dmr-pop-delete{width:calc(100vw - 16px)}}
     `;
@@ -174,7 +171,7 @@ window.__ModuleLoader__.load({
     // not a plugin contract, and a missing export would blank the Chat row.
     const iconProps = { viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, focusable: 'false' };
     function IconEdit() { return h('svg', iconProps, h('path', { d: 'M10.4 2.8l2.8 2.8L5 13.8H2.2v-2.8l8.2-8.2z' }), h('path', { d: 'M9 4.2l2.8 2.8' })); }
-    function IconTrash() { return h('svg', iconProps, h('path', { d: 'M2.8 4.4h10.4' }), h('path', { d: 'M6.2 4.4V2.8h3.6v1.6' }), h('path', { d: 'M4.4 4.4l.6 8.8h6l.6-8.8' })); }
+    function IconRollback() { return h('svg', iconProps, h('path', { d: 'M5.7 3 3 5.7l2.7 2.7' }), h('path', { d: 'M3 5.7h5.8a3.6 3.6 0 0 1 0 7.2H5.5' })); }
     function IconCopy() { return h('svg', iconProps, h('rect', { x: '5.4', y: '5.4', width: '7.8', height: '7.8', rx: '1.4' }), h('path', { d: 'M3.4 10.6V4.2a1.4 1.4 0 0 1 1.4-1.4h6.4' })); }
     function IconCheck() { return h('svg', iconProps, h('path', { d: 'M2.8 8.6l3.4 3.2 7-7.4' })); }
 
@@ -582,7 +579,7 @@ window.__ModuleLoader__.load({
               },
             }, t('save'))
             : h('button', {
-              className: 'dmr-button dmr-destructive',
+              className: 'dmr-button dmr-primary',
               type: 'button',
               disabled: dialog.busy || blocked,
               onClick: () => void execute(canRollback && selected),
@@ -644,7 +641,7 @@ window.__ModuleLoader__.load({
           // never reachable, so it cannot be mis-clicked while a turn runs.
           const button = (Icon, label, onClick, options = {}) => h('button', {
             type: 'button',
-            className: `dmr-action${options.danger ? ' dmr-danger' : ''}`,
+            className: 'dmr-action',
             'aria-label': label,
             'aria-disabled': options.disabled ? true : undefined,
             'data-unavailable': options.disabled ? true : undefined,
@@ -668,10 +665,10 @@ window.__ModuleLoader__.load({
                 attachmentBlocked ? t('attachments') : running ? t('running') : t('edit'),
                 (event) => openFrom('edit', event),
                 { disabled: running || attachmentBlocked }),
-              button(IconTrash,
+              button(IconRollback,
                 running ? t('running') : t('remove'),
                 (event) => openFrom('delete', event),
-                { danger: true, disabled: running }),
+                { disabled: running }),
               button(copied ? IconCheck : IconCopy,
                 copied ? t('copied') : t('copy'),
                 () => copyText())));

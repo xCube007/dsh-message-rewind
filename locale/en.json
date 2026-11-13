@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Message Edit & Rollback",
-    "description": "Edit sent prompts or branch before a message, with an optional guarded rollback of recorded text-file changes."
+    "description": "Edit sent prompts or roll back a message and every following turn, with an optional guarded rollback of recorded text-file changes."
   }
 }

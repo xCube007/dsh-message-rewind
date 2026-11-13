@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover.png" alt="dsh-message-rewind: sent it wrong? fix it and resend — edit a sent message, delete everything after it, or roll the recorded file changes back" width="100%">
+  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover-v1.3.0.png" alt="dsh-message-rewind: sent it wrong? fix it and resend — edit a sent message, roll back everything after it, or roll the recorded file changes back" width="100%">
 </p>
 
 <div align="center">
@@ -20,10 +20,10 @@
 
 </div>
 
-Edit and delete your own messages in [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+Edit or roll back your own messages in [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
 - Typo in a sent prompt? Fix it, and the conversation continues from the edited text — no need to start over.
-- Said something you regret? Delete that message and every turn after it disappears with it.
+- Said something you regret? Roll back that message, and every turn after it disappears with it.
 - Files changed during that turn? Optionally roll them back to the state before the message.
 
 ---
@@ -33,29 +33,29 @@ Edit and delete your own messages in [DeepSeek Harness](https://github.com/deeps
 | You want to | What the plugin does |
 | --- | --- |
 | Change a sent message | Click the pencil under your bubble, edit the text, then click **Save and resend**. Everything after that message is truncated and the conversation restarts from your edited text. |
-| Drop an out-of-line message | Click the trash icon and confirm. That message and every following turn are deleted. |
-| Restore files too | When deleting or editing, if that turn recorded file changes and the record is complete, the popover lets you choose **messages only** or **messages and files**. |
+| Roll back an out-of-line message | Click the rollback icon (the undo arrow) and confirm. The conversation returns to before that message, and every following turn is discarded. |
+| Restore files too | When rolling back or editing, if that turn recorded file changes and the record is complete, the popover lets you choose **messages only** or **messages and files**. |
 | Stay out of a running task | The action is refused while a turn is still running, so it never races the agent's writes. |
 
-Only your regular messages have these buttons; steering rows injected during a running turn do not offer edit/delete. The **Copy** button is still there, in the same position.
+Only your regular messages have these buttons; steering rows injected during a running turn do not offer edit/rollback. The **Copy** button is still there, in the same position.
 
 ## Screenshots
 
-Your own messages get **edit / delete / copy** buttons under the bubble:
+Your own messages get **edit / rollback / copy** buttons under the bubble:
 
-<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.2.1.png" alt="Edit, delete and copy buttons under a user message" width="760">
+<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.3.0.png" alt="Edit, rollback and copy buttons under a user message" width="760">
 
 The popover opens right under the button you clicked and points at it with a small arrow; click outside or press Esc to dismiss it. The editor reads the file changes recorded after that message as soon as it opens — collapsed into one **N file changes recorded** line unless you expand it — and a two-way switch decides whether files are restored too. When the record is incomplete the switch is not offered, so only a messages-only rollback is possible:
 
-| Edit popover | Delete confirmation |
+| Edit popover | Rollback confirmation |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog-v1.2.1.png" alt="Edit popover: file changes collapse to one line, rollback scope is a two-way switch" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog-v1.2.1.png" alt="Delete confirmation: a one-line confirm when no files changed" width="360"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog-v1.3.0.png" alt="Edit popover: file changes collapse to one line, rollback scope is a two-way switch" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-dialog-v1.3.0.png" alt="Rollback confirmation: a one-line confirm when no files changed" width="360"> |
 
 The popover follows its button: it flips above when there is no room below, narrows to the screen width on small viewports, and keeps the same layering in the light theme:
 
 | Flips above near the bottom | Narrow screen (390px) | Light theme |
 | :---: | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-flip-v1.2.1.png" alt="Popover flipped above the button, arrow pointing down at it" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-narrow-v1.2.1.png" alt="Popover narrowed to a 390px viewport" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-light-v1.2.1.png" alt="Delete popover in the light theme" width="240"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-flip-v1.3.0.png" alt="Popover flipped above the button, arrow pointing down at it" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-narrow-v1.3.0.png" alt="Popover narrowed to a 390px viewport" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-light-v1.3.0.png" alt="Rollback popover in the light theme" width="240"> |
 
 When file changes were recorded, snapshot and Git-worktree limits are shown in the popover itself, not after a failed operation.
 
@@ -111,16 +111,16 @@ Use a link dependency; the remaining steps are the same:
 
 ### After installing
 
-The DSH startup log lists `message-rewind` as active. Refresh the page and your own message bubbles get **edit / delete / copy** buttons.
+The DSH startup log lists `message-rewind` as active. Refresh the page and your own message bubbles get **edit / rollback / copy** buttons.
 
 ## Usage
 
 1. Click the pencil → a popover opens under the button; change the text and click **Save and resend**.
-2. Click the trash icon → click **Delete** to remove that message and every following turn.
+2. Click the rollback icon (the undo arrow) → click **Roll back** to return to before that message; every following turn is discarded.
 3. The popover reads the file changes recorded after that message as soon as it opens and keeps them collapsed into one line; when files changed and their record is complete it also offers a two-way **Rollback scope**:
    - **Messages only** (default) — leave files untouched;
    - **Messages + files** — restore files to their content before that message;
-   - pick the scope, then click **Save and resend** or **Delete**.
+   - pick the scope, then click **Save and resend** or **Roll back**.
 
 Lost or truncated snapshots, queued prompts, and non-Git workspaces are called out in one-line notes inside the popover.
 
@@ -143,16 +143,16 @@ Lost or truncated snapshots, queued prompts, and non-Git workspaces are called o
 ## FAQ
 
 **Q: Does the sidebar get an extra conversation after a rollback?**
-No — there is always just one conversation, and its title normally carries over. The underlying session ID does change, though: DSH session logs are append-only and have no "delete a middle chunk" API, so the plugin forks a truncated branch, removes the original from the sidebar, and deletes its log directory directly; the normal path writes no archive entry. Repeated edits therefore do not pile up same-titled archive entries. If you referenced that session ID elsewhere, fetch it again. When the first message is deleted, the replacement is a new conversation that has not been titled yet, so it may show the default title.
+No — there is always just one conversation, and its title normally carries over. The underlying session ID does change, though: DSH session logs are append-only and have no "delete a middle chunk" API, so the plugin forks a truncated branch, removes the original from the sidebar, and deletes its log directory directly; the normal path writes no archive entry. Repeated edits and rollbacks therefore do not pile up same-titled archive entries. If you referenced that session ID elsewhere, fetch it again. When the first message is rolled back, the replacement is a new conversation that has not been titled yet, so it may show the default title.
 
 **Q: Can the original record be recovered?**
 Normally it is deleted outright and never reaches the archive. Only when the live session cannot be detached, or its log directory is still held open and cannot be removed, does the plugin fall back to archiving it; the log is not silently lost.
 
 **Q: Why can't messages with attachments be edited?**
-Attachments are stored as part of the message content, and editing only supports plain-text messages. Messages with attachments can still be deleted.
+Attachments are stored as part of the message content, and editing only supports plain-text messages. Messages with attachments can still be rolled back.
 
-**Q: The edit and delete buttons are greyed out with a "turn is still running" note?**
-Stop the running task first; the buttons stay disabled until the turn ends. Also note that queued prompts are discarded together with the deleted record — the popover warns you about this.
+**Q: The edit and rollback buttons are greyed out with a "turn is still running" note?**
+Stop the running task first; the buttons stay disabled until the turn ends. Also note that queued prompts are discarded together with the rolled-back record — the popover warns you about this.
 
 **Q: I don't see the buttons.**
 Check that the plugin is enabled under **Settings → Plugins** and that you refreshed the page. Only messages you sent have these buttons.

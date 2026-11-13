@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover.png" alt="dsh-message-rewind：发错了，改掉重发 —— 编辑已发送的消息、删除越界的对话、连文件一起回滚" width="100%">
+  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover-v1.3.0.png" alt="dsh-message-rewind：发错了，改掉重发 —— 编辑已发送的消息、回滚越界的对话、连文件一起回滚" width="100%">
 </p>
 
 <div align="center">
@@ -20,13 +20,13 @@
 
 </div>
 
-给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的消息气泡加两个按钮：**编辑**和**删除**。
+给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的消息气泡加两个按钮：**编辑**和**回滚**。
 
 - 发错字了？改一下，直接从改后的内容重新开始，不用重开对话。
-- 说话越界了？删掉这条，它之后的所有对话一起消失。
+- 说话越界了？回滚这条消息，它之后的所有对话一起消失。
 - 那一轮还改过文件？可以顺手把文件也还原到这条消息之前的样子。
 
-> A DSH plugin that adds **edit** and **delete** to your own message bubbles. Deleting truncates every following turn and can optionally roll the recorded file changes back.
+> A DSH plugin that adds **edit** and **rollback** to your own message bubbles. Rolling back truncates every following turn and can optionally roll the recorded file changes back.
 
 ---
 
@@ -35,29 +35,29 @@
 | 你想要的 | 插件怎么帮你 |
 | --- | --- |
 | 改掉已发送的消息 | 点消息气泡下方的铅笔，改完点「保存并重发」，这条消息之后的内容会被截断，然后按你改后的内容重新开始 |
-| 撤掉一条越界的消息 | 点垃圾桶，确认后这条消息连同它之后的所有对话一起删除 |
-| 连文件一起还原 | 删除/编辑时，如果那一轮动过文件且改动记录完整，按钮下方的小窗会让你选「只回滚消息」还是「连文件一起回滚」 |
+| 回滚一条越界的消息 | 点回滚按钮（撤销箭头），确认后回到这条消息之前，之后的对话一并丢弃 |
+| 连文件一起还原 | 回滚或编辑时，如果那一轮动过文件且改动记录完整，按钮下方的小窗会让你选「只回滚消息」还是「连文件一起回滚」 |
 | 不打扰正在跑的任务 | 有未结束的轮次时直接拒绝操作，不会和正在执行的 turn 抢写 |
 
-只有你自己发出的普通消息才有这两个按钮；一轮运行中被追加的 steering 行不提供编辑/删除。「复制」按钮仍在，位置不变。
+只有你自己发出的普通消息才有这两个按钮；一轮运行中被追加的 steering 行不提供编辑/回滚。「复制」按钮仍在，位置不变。
 
 ## 界面
 
-自己发出的消息，气泡下方会多出「编辑 / 删除 / 复制」三个按钮：
+自己发出的消息，气泡下方会多出「编辑 / 回滚 / 复制」三个按钮：
 
-<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.2.1.png" alt="消息气泡下方的编辑、删除、复制按钮" width="760">
+<img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.3.0.png" alt="消息气泡下方的编辑、回滚、复制按钮" width="760">
 
-点铅笔或垃圾桶之后，小窗直接出现在那个按钮正下方，并用一个小箭头指向它；点窗外或按 Esc 就收起。编辑窗一打开就会读出这条消息之后记录到的文件改动，默认只显示一行「已记录 N 处文件改动」，展开才看具体路径；要不要连文件一起还原，用一个二选一的开关决定（记录不完整时开关不出现，只能回滚消息）：
+点铅笔或回滚按钮之后，小窗直接出现在那个按钮正下方，并用一个小箭头指向它；点窗外或按 Esc 就收起。编辑窗一打开就会读出这条消息之后记录到的文件改动，默认只显示一行「已记录 N 处文件改动」，展开才看具体路径；要不要连文件一起还原，用一个二选一的开关决定（记录不完整时开关不出现，只能回滚消息）：
 
-| 编辑小窗 | 删除确认 |
+| 编辑小窗 | 回滚确认 |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog-v1.2.1.png" alt="编辑小窗：文件改动收起成一行，回滚范围二选一" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/delete-dialog-v1.2.1.png" alt="删除确认：没有文件改动时只剩一行确认" width="360"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog-v1.3.0.png" alt="编辑小窗：文件改动收起成一行，回滚范围二选一" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-dialog-v1.3.0.png" alt="回滚确认：没有文件改动时只剩一行确认" width="360"> |
 
 小窗跟着按钮走：窗口底部放不下时自动翻到按钮上方，窄屏下收窄到屏幕宽度，亮色主题也保持同一套层级：
 
 | 靠近底部时翻到上方 | 窄屏（390px） | 亮色主题 |
 | :---: | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-flip-v1.2.1.png" alt="小窗翻到按钮上方，箭头朝下指向按钮" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-narrow-v1.2.1.png" alt="窄屏下小窗收窄到屏幕宽度" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-light-v1.2.1.png" alt="亮色主题下的删除小窗" width="240"> |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-flip-v1.3.0.png" alt="小窗翻到按钮上方，箭头朝下指向按钮" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-narrow-v1.3.0.png" alt="窄屏下小窗收窄到屏幕宽度" width="240"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/popover-light-v1.3.0.png" alt="亮色主题下的回滚小窗" width="240"> |
 
 有文件改动时，快照失效或记录不完整、工作区不在 Git 仓库等限制也会直接标在小窗里，不用等到操作失败才知道。
 
@@ -113,16 +113,16 @@ git clone https://github.com/xCube007/dsh-message-rewind.git D:/Code/dsh-message
 
 ### 装好之后
 
-DSH 启动日志里会出现 `message-rewind` 且状态为 active；刷新页面，你自己消息的气泡下方就会多出「编辑 / 删除 / 复制」三个按钮。
+DSH 启动日志里会出现 `message-rewind` 且状态为 active；刷新页面，你自己消息的气泡下方就会多出「编辑 / 回滚 / 复制」三个按钮。
 
 ## 使用
 
 1. 点铅笔 → 按钮下方弹出小窗，改完点「保存并重发」。
-2. 点垃圾桶 → 点「删除」，删除这条消息及其后的全部对话。
+2. 点回滚按钮（撤销箭头）→ 点「回滚」，回滚这条消息及其后的全部对话。
 3. 小窗打开时就会读取这条消息之后记录到的文件改动：默认折叠成一行「已记录 N 处文件改动」，点开可看路径；改动记录完整且有改动时还会多出一个二选一的回滚范围：
    - **只回滚消息**（默认）：文件保持现状；
    - **连文件一起回滚**：文件恢复成这条消息之前的内容；
-   - 选好范围后，点「保存并重发」或「删除」执行。
+   - 选好范围后，点「保存并重发」或「回滚」执行。
 
 快照失效或记录不完整、还有排队中的消息、工作区不在 Git 仓库等情况会在小窗里用一行提示说明。
 
@@ -145,16 +145,16 @@ DSH 启动日志里会出现 `message-rewind` 且状态为 active；刷新页面
 ## 常见问题
 
 **Q：回滚之后，侧边栏是不是会多出一条对话？**
-不会，始终只有一条对话（标题通常沿用原会话）。但底层会话 ID 会变：DSH 的会话日志是只追加的，没有「删掉中间一段」的接口，插件只能 fork 出一个截断后的分支，再把原会话从侧边栏摘掉并直接删除其日志目录；正常路径不写入归档。所以反复编辑/删除不会在归档里堆出同名会话；如果你在别处引用过这个会话 ID，需要重新取一次。删除的是第一条消息时，替换出来的新会话还没有标题，可能先显示默认标题。
+不会，始终只有一条对话（标题通常沿用原会话）。但底层会话 ID 会变：DSH 的会话日志是只追加的，没有「删掉中间一段」的接口，插件只能 fork 出一个截断后的分支，再把原会话从侧边栏摘掉并直接删除其日志目录；正常路径不写入归档。所以反复编辑/回滚不会在归档里堆出同名会话；如果你在别处引用过这个会话 ID，需要重新取一次。回滚的是第一条消息时，替换出来的新会话还没有标题，可能先显示默认标题。
 
 **Q：原会话的记录还能找回吗？**
 正常情况下会被直接删除，不进入归档。只有当运行中的原会话摘不掉，或日志目录被占用、删不掉时，才会退回归档兜底；失败也不会静默丢日志。
 
 **Q：为什么带附件的消息不能编辑？**
-附件是作为消息内容的一部分存下来的，编辑只支持纯文本消息。带附件的消息可以删除。
+附件是作为消息内容的一部分存下来的，编辑只支持纯文本消息。带附件的消息可以回滚。
 
-**Q：编辑/删除按钮是灰的，提示「当前有未结束的轮次」？**
-先停止正在运行的任务再操作；轮次结束前按钮不可用。另外，如果有排队中的消息，它们会随被删除的记录一起作废——小窗里会提示。
+**Q：编辑/回滚按钮是灰的，提示「当前有未结束的轮次」？**
+先停止正在运行的任务再操作；轮次结束前按钮不可用。另外，如果有排队中的消息，它们会随被回滚的记录一起作废——小窗里会提示。
 
 **Q：看不到按钮？**
 确认插件已在「设置 → 插件」里启用、并且刷新过一次页面；另外只有你自己发的消息才有这两个按钮。
