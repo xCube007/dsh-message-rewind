@@ -82,7 +82,7 @@ If you prefer editing the profile yourself, the manual route is the same three s
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.2.4"
+       "dsh-message-rewind": "^1.3.0"
      }
    }
    ```
