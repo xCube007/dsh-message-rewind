@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover.png" alt="dsh-message-rewind: edit what you said, rewind to that point — edit a sent message, delete everything after it, or roll the recorded file changes back" width="100%">
+  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover.png" alt="dsh-message-rewind: sent it wrong? fix it and resend — edit a sent message, delete everything after it, or roll the recorded file changes back" width="100%">
 </p>
 
 <div align="center">
 
 # dsh-message-rewind
 
-**Edit one line, rewind to that line**
+**Sent it wrong? Fix it and resend.**
 
 [简体中文](README.md) · [English](README.en.md)
 
