@@ -1,6 +1,24 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover.png" alt="dsh-message-rewind: edit what you said, rewind to that point — edit a sent message, delete everything after it, or roll the recorded file changes back" width="100%">
+</p>
+
+<div align="center">
+
 # dsh-message-rewind
 
-[简体中文](README.md) | **English**
+**Edit one line, rewind to that line**
+
+[简体中文](README.md) · [English](README.en.md)
+
+[Features](#what-it-does) · [Screenshots](#screenshots) · [Install](#install) · [File rollback](#file-rollback-what-can-and-cannot-be-restored) · [FAQ](#faq)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![npm package](https://img.shields.io/npm/v/dsh-message-rewind.svg?label=npm%20package&color=brightgreen)](https://www.npmjs.com/package/dsh-message-rewind)
+[![npm downloads](https://img.shields.io/npm/dt/dsh-message-rewind.svg?label=npm%20downloads&color=orange)](https://www.npmjs.com/package/dsh-message-rewind)
+[![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](#install)
+[![DSH up to 0.2.2-rc.3](https://img.shields.io/badge/DSH-up%20to%200.2.2--rc.3-2563eb.svg)](#install)
+
+</div>
 
 Edit and delete your own messages in [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
@@ -43,7 +61,7 @@ When file changes were recorded, snapshot and Git-worktree limits are shown in t
 
 ## Install
 
-Requires DSH 0.2.2-rc.1 or newer (0.2.x) and Node.js ≥ 20; verified on 0.2.2-rc.1. DSH validates `engines.dsh` at startup and refuses to load the plugin on an older host.
+Requires DSH 0.2.2-rc.1 or newer (0.2.x) and Node.js ≥ 20; verified on 0.2.2-rc.1 and 0.2.2-rc.3. DSH validates `engines.dsh` at startup and refuses to load the plugin on an older host.
 
 ### From npm (recommended)
 

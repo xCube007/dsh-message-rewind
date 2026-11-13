@@ -1,6 +1,24 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover.png" alt="dsh-message-rewind：改一句话，回到那一步 —— 编辑已发送的消息、删除越界的对话、连文件一起回滚" width="100%">
+</p>
+
+<div align="center">
+
 # dsh-message-rewind
 
-**简体中文** | [English](README.en.md)
+**改一句话，回到那一步**
+
+[简体中文](README.md) · [English](README.en.md)
+
+[功能](#它能做什么) · [界面](#界面) · [安装](#安装) · [文件回滚](#文件回滚什么能回什么回不了) · [常见问题](#常见问题)
+
+[![许可证 MIT](https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF%E8%AF%81-MIT-blue.svg)](LICENSE)
+[![npm package](https://img.shields.io/npm/v/dsh-message-rewind.svg?label=npm%20package&color=brightgreen)](https://www.npmjs.com/package/dsh-message-rewind)
+[![npm 下载量](https://img.shields.io/npm/dt/dsh-message-rewind.svg?label=npm%20%E4%B8%8B%E8%BD%BD%E9%87%8F&color=orange)](https://www.npmjs.com/package/dsh-message-rewind)
+[![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](#%E5%AE%89%E8%A3%85)
+[![DSH 支持至 0.2.2-rc.3](https://img.shields.io/badge/DSH-%E6%94%AF%E6%8C%81%E8%87%B3%200.2.2--rc.3-2563eb.svg)](#%E5%AE%89%E8%A3%85)
+
+</div>
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的消息气泡加两个按钮：**编辑**和**删除**。
 
@@ -45,7 +63,7 @@
 
 ## 安装
 
-需要 DSH 0.2.2-rc.1 及以上（0.2.x），Node.js ≥ 20；已在 0.2.2-rc.1 上验证。宿主启动时会按 `engines.dsh` 校验，低于该版本会拒绝加载。
+需要 DSH 0.2.2-rc.1 及以上（0.2.x），Node.js ≥ 20；已在 0.2.2-rc.1 与 0.2.2-rc.3 上验证。宿主启动时会按 `engines.dsh` 校验，低于该版本会拒绝加载。
 
 ### 从 npm 安装（推荐）
 
