@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover-v1.3.0.png" alt="dsh-message-rewind：发错了，改掉重发 —— 编辑已发送的消息、回滚越界的对话、连文件一起回滚" width="100%">
+  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover-v1.3.1.png" alt="dsh-message-rewind：发错了，改掉重发 —— 编辑已发送的消息、回滚越界的对话、连文件一起回滚" width="100%">
 </p>
 
 <div align="center">

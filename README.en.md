@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover-v1.3.0.png" alt="dsh-message-rewind: sent it wrong? fix it and resend — edit a sent message, roll back everything after it, or roll the recorded file changes back" width="100%">
+  <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/cover-v1.3.1.png" alt="dsh-message-rewind: sent it wrong? fix it and resend — edit a sent message, roll back everything after it, or roll the recorded file changes back" width="100%">
 </p>
 
 <div align="center">
