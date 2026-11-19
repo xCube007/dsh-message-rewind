@@ -16,7 +16,7 @@
 [![npm package](https://img.shields.io/npm/v/dsh-message-rewind.svg?label=npm%20package&color=brightgreen)](https://www.npmjs.com/package/dsh-message-rewind)
 [![npm downloads](https://img.shields.io/npm/dt/dsh-message-rewind.svg?label=npm%20downloads&color=orange)](https://www.npmjs.com/package/dsh-message-rewind)
 [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](#install)
-[![DSH up to 0.2.2-rc.3](https://img.shields.io/badge/DSH-up%20to%200.2.2--rc.3-2563eb.svg)](#install)
+[![DSH up to 0.2.2-rc.5](https://img.shields.io/badge/DSH-up%20to%200.2.2--rc.5-2563eb.svg)](#install)
 
 </div>
 
@@ -61,7 +61,7 @@ When file changes were recorded, snapshot and Git-worktree limits are shown in t
 
 ## Install
 
-Requires DSH 0.2.2-rc.1 or newer (0.2.x) and Node.js ≥ 20; verified on 0.2.2-rc.1 and 0.2.2-rc.3. DSH validates `engines.dsh` at startup and refuses to load the plugin on an older host.
+Requires DSH 0.2.2-rc.1 or newer (0.2.x) and Node.js ≥ 20; tested end to end on 0.2.2-rc.1 and 0.2.2-rc.3, and the DSH surfaces it uses were re-checked against 0.2.2-rc.5 (Host services, Session events, and Client slots are unchanged). DSH validates `engines.dsh` at startup and refuses to load the plugin on an older host.
 
 ### From npm (recommended)
 

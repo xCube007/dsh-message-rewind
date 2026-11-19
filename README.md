@@ -16,7 +16,7 @@
 [![npm package](https://img.shields.io/npm/v/dsh-message-rewind.svg?label=npm%20package&color=brightgreen)](https://www.npmjs.com/package/dsh-message-rewind)
 [![npm 下载量](https://img.shields.io/npm/dt/dsh-message-rewind.svg?label=npm%20%E4%B8%8B%E8%BD%BD%E9%87%8F&color=orange)](https://www.npmjs.com/package/dsh-message-rewind)
 [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](#%E5%AE%89%E8%A3%85)
-[![DSH 支持至 0.2.2-rc.3](https://img.shields.io/badge/DSH-%E6%94%AF%E6%8C%81%E8%87%B3%200.2.2--rc.3-2563eb.svg)](#%E5%AE%89%E8%A3%85)
+[![DSH 支持至 0.2.2-rc.5](https://img.shields.io/badge/DSH-%E6%94%AF%E6%8C%81%E8%87%B3%200.2.2--rc.5-2563eb.svg)](#%E5%AE%89%E8%A3%85)
 
 </div>
 
@@ -63,7 +63,7 @@
 
 ## 安装
 
-需要 DSH 0.2.2-rc.1 及以上（0.2.x），Node.js ≥ 20；已在 0.2.2-rc.1 与 0.2.2-rc.3 上验证。宿主启动时会按 `engines.dsh` 校验，低于该版本会拒绝加载。
+需要 DSH 0.2.2-rc.1 及以上（0.2.x），Node.js ≥ 20；已在 0.2.2-rc.1 与 0.2.2-rc.3 上实测跑通，并按 0.2.2-rc.5 复核了用到的接口面（Host 服务、会话事件、客户端槽位均无变化）。宿主启动时会按 `engines.dsh` 校验，低于该版本会拒绝加载。
 
 ### 从 npm 安装（推荐）
 
