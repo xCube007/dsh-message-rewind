@@ -45,7 +45,7 @@ Your own messages get **edit / rollback / copy** buttons under the bubble:
 
 <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.3.0.png" alt="Edit, rollback and copy buttons under a user message" width="760">
 
-The popover opens right under the button you clicked and points at it with a small arrow; click outside or press Esc to dismiss it. The editor reads the file changes recorded after that message as soon as it opens — collapsed into one **N file changes recorded** line unless you expand it — and a two-way switch decides whether files are restored too. When the record is incomplete the switch is not offered, so only a messages-only rollback is possible:
+The popover opens right under the button you clicked and points at it with a small arrow; click outside or press Esc to dismiss it. The editor reads the file changes recorded after that message as soon as it opens — collapsed into one **N file changes recorded** line unless you expand it — and a two-way switch decides whether files are restored too — blue for **messages only**, red for **messages + files**. When the record is incomplete the switch is not offered, so only a messages-only rollback is possible:
 
 | Edit popover | Rollback confirmation |
 | :---: | :---: |

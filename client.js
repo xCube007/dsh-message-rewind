@@ -136,9 +136,18 @@ window.__ModuleLoader__.load({
       .dmr-files{display:flex;flex-direction:column;gap:2px;max-height:112px;overflow:auto;margin:6px 0 0;padding:0 0 0 12px;list-style:none}
       .dmr-files li{font:11.5px/16px var(--ds-font-family-code,ui-monospace,monospace);color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere}
       .dmr-scope{display:flex;gap:2px;margin:10px 0 0;padding:2px;background:var(--dsw-alias-interactive-bg-hover);border-radius:calc(var(--dsw-radius-sm) + 1px)}
-      .dmr-seg{flex:1 1 0;min-width:0;overflow:hidden;border:0;border-radius:var(--dsw-radius-xs);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:16px;padding:4px 6px;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+      .dmr-seg{flex:1 1 0;min-width:0;overflow:hidden;border:0;border-radius:var(--dsw-radius-xs);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:16px;padding:4px 6px;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;transition:background .12s,color .12s,box-shadow .12s}
       .dmr-seg:hover{color:var(--dsw-alias-label-primary)}
-      .dmr-seg[aria-checked=true]{background:var(--dsw-alias-button-elevated-fill);color:var(--dsw-alias-label-primary);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.16),0 0 0 .5px var(--dsw-alias-border-l2)}
+      /* The scope is colour-coded before it is read: a calm blue for messages
+         only, irreversible red for rolling the recorded files back. The picked
+         half turns solid; the other keeps a light wash of its colour. */
+      .dmr-seg[data-scope=messages]{background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 8%,transparent);color:var(--dsw-alias-state-business-primary)}
+      .dmr-seg[data-scope=files]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);color:var(--dsw-alias-state-error-primary)}
+      .dmr-seg[data-scope=messages]:hover{background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 14%,transparent);color:var(--dsw-alias-state-business-primary)}
+      .dmr-seg[data-scope=files]:hover{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 14%,transparent);color:var(--dsw-alias-state-error-primary)}
+      .dmr-seg[aria-checked=true]{font-weight:500;color:var(--dsw-alias-label-primary-foreground);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+      .dmr-seg[data-scope=messages][aria-checked=true]{background:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-label-primary-foreground)}
+      .dmr-seg[data-scope=files][aria-checked=true]{background:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-label-primary-foreground)}
       .dmr-seg:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}
       .dmr-warning{margin:8px 0 0;font-size:12px;line-height:17px;color:var(--dsw-alias-state-warn-primary)}
       .dmr-error{margin:8px 0 0;font-size:12px;line-height:17px;color:var(--dsw-alias-state-error-primary);overflow-wrap:anywhere}
@@ -534,6 +543,7 @@ window.__ModuleLoader__.load({
               className: 'dmr-seg',
               type: 'button',
               role: 'radio',
+              'data-scope': 'messages',
               'aria-checked': !selected,
               onClick: () => patchIf(dialog.token, { withFiles: false }),
             }, t('messagesOnly')),
@@ -541,6 +551,7 @@ window.__ModuleLoader__.load({
               className: 'dmr-seg',
               type: 'button',
               role: 'radio',
+              'data-scope': 'files',
               'aria-checked': selected,
               onClick: () => patchIf(dialog.token, { withFiles: true }),
             }, t('withFiles'))) : null;

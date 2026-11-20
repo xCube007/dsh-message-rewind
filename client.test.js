@@ -136,6 +136,9 @@ plugin.apply(ctx);
 globalThis.console.error = originalError;
 
 assert.equal(styleTags.length, 1, 'one stylesheet is inserted');
+const cssText = styleTags[0].textContent;
+assert.match(cssText, /\.dmr-seg\[data-scope=messages\][^{]*\{[^}]*--dsw-alias-state-business-primary/, 'messages-only is tinted with the calm blue');
+assert.match(cssText, /\.dmr-seg\[data-scope=files\][^{]*\{[^}]*--dsw-alias-state-error-primary/, 'file rollback is tinted with the error red');
 assert.deepEqual(calls.filter((call) => call[0] === 'locale.register').map((call) => call[2]), ['zh', 'en']);
 const nodeRegistration = registrations.find((entry) => entry.options.key === 'user' && entry.options.priority === -1);
 const overlayRegistration = registrations.find((entry) => entry.options.id === 'message-rewind.dialog');
@@ -274,6 +277,7 @@ assert.deepEqual(
   'the recorded files are listed');
 const scope = queryAll(dialog, (element) => element.props?.role === 'radio');
 assert.equal(scope.length, 2, 'edit offers the shared scope control');
+assert.deepEqual(scope.map((option) => option.props['data-scope']), ['messages', 'files'], 'each scope carries its own colour role');
 assert.equal(scope[0].props['aria-checked'], true, 'messages-only is the default');
 assert.deepEqual(scope.map((option) => option.children.join('')), [
   'message-rewind:messagesOnly',
