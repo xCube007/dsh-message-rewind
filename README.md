@@ -47,11 +47,17 @@
 
 <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.3.0.png" alt="消息气泡下方的编辑、回滚、复制按钮" width="760">
 
-点铅笔或回滚按钮之后，小窗直接出现在那个按钮正下方，并用一个小箭头指向它；点窗外或按 Esc 就收起。编辑窗一打开就会读出这条消息之后记录到的文件改动，默认只显示一行「已记录 N 处文件改动」，展开才看具体路径；要不要连文件一起还原，用一个二选一的开关决定——蓝色是「只回滚消息」，红色是「连文件一起回滚」（记录不完整时开关不出现，只能回滚消息）：
+点铅笔或回滚按钮之后，小窗直接出现在那个按钮正下方，并用一个小箭头指向它；点窗外或按 Esc 就收起。编辑窗一打开就会读出这条消息之后记录到的文件改动，默认只显示一行「已记录 N 处文件改动」，展开才看具体路径；要不要连文件一起还原，用一个二选一的开关决定（记录不完整时开关不出现，只能回滚消息）：
 
 | 编辑小窗 | 回滚确认 |
 | :---: | :---: |
 | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog-v1.3.0.png" alt="编辑小窗：文件改动收起成一行，回滚范围二选一" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-dialog-v1.3.0.png" alt="回滚确认：没有文件改动时只剩一行确认" width="360"> |
+
+回滚范围用颜色区分：蓝色是「只回滚消息」，红色是「连文件一起回滚」。选中的一项会变成整块实色，未选中的保留一层同色淡底：
+
+| 只回滚消息（蓝色，默认） | 连文件一起回滚（红色） |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-scope-messages-v1.4.0.png" alt="只回滚消息：蓝色实心按钮，默认选中" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-scope-files-v1.4.0.png" alt="连文件一起回滚：红色实心按钮，下方提示文件会还原" width="360"> |
 
 小窗跟着按钮走：窗口底部放不下时自动翻到按钮上方，窄屏下收窄到屏幕宽度，亮色主题也保持同一套层级：
 
@@ -84,7 +90,7 @@ dsh plugin --profile web add dsh-message-rewind
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.3.0"
+       "dsh-message-rewind": "^1.4.0"
      }
    }
    ```

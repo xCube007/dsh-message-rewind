@@ -45,11 +45,17 @@ Your own messages get **edit / rollback / copy** buttons under the bubble:
 
 <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/message-actions-v1.3.0.png" alt="Edit, rollback and copy buttons under a user message" width="760">
 
-The popover opens right under the button you clicked and points at it with a small arrow; click outside or press Esc to dismiss it. The editor reads the file changes recorded after that message as soon as it opens — collapsed into one **N file changes recorded** line unless you expand it — and a two-way switch decides whether files are restored too — blue for **messages only**, red for **messages + files**. When the record is incomplete the switch is not offered, so only a messages-only rollback is possible:
+The popover opens right under the button you clicked and points at it with a small arrow; click outside or press Esc to dismiss it. The editor reads the file changes recorded after that message as soon as it opens — collapsed into one **N file changes recorded** line unless you expand it — and a two-way switch decides whether files are restored too. When the record is incomplete the switch is not offered, so only a messages-only rollback is possible:
 
 | Edit popover | Rollback confirmation |
 | :---: | :---: |
 | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/edit-dialog-v1.3.0.png" alt="Edit popover: file changes collapse to one line, rollback scope is a two-way switch" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-dialog-v1.3.0.png" alt="Rollback confirmation: a one-line confirm when no files changed" width="360"> |
+
+The rollback scope is colour-coded: blue for **messages only**, red for **messages + files**. The chosen option turns solid, while the other keeps a light wash of its colour:
+
+| Messages only (blue, default) | Messages + files (red) |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-scope-messages-v1.4.0.png" alt="Messages only: the blue solid button is selected" width="360"> | <img src="https://raw.githubusercontent.com/xCube007/dsh-message-rewind/main/img/rollback-scope-files-v1.4.0.png" alt="Messages + files: the red solid button is selected, with the restore hint below" width="360"> |
 
 The popover follows its button: it flips above when there is no room below, narrows to the screen width on small viewports, and keeps the same layering in the light theme:
 
@@ -82,7 +88,7 @@ If you prefer editing the profile yourself, the manual route is the same three s
    ```json
    {
      "dependencies": {
-       "dsh-message-rewind": "^1.3.0"
+       "dsh-message-rewind": "^1.4.0"
      }
    }
    ```
